@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"net/http"
 )
 
@@ -14,4 +15,15 @@ func main() {
 	fmt.Printf("The server started working on: %s\n", server)
 	http.HandleFunc("/", homeHandler)
 	http.ListenAndServe(":8080", nil)
+	tmpl, err := template.ParseFiles("template/index.html")
+	if err != nil {
+		fmt.Println("Error parsing template:", err)
+		return
+	}
+	err = tmpl.Execute(w, nil)
+	if err != nil {
+		fmt.Println("Error executing template:", err)
+		return
+	}
+
 }
