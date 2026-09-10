@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ошибка {{.Code}} — Symbol Art Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <div class="page error-page">
+    <div class="error-card card">
+      <div class="error-code">{{.Code}}</div>
+      <h1>{{.Title}}</h1>
+      <p class="error-message">{{.Message}}</p>
+      <a href="/" class="btn btn-primary">На главную</a>
+    </div>
+  </div>
+</body>
+</html>
