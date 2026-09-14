@@ -2,8 +2,8 @@ package main
 
 import (
 	"log"
-	"log/slog"
 	"net/http"
+	"html/template"
 )
 
 func main() {
@@ -15,23 +15,31 @@ func main() {
 	mux.HandleFunc("GET /", handleRoot)
 	mux.HandleFunc("POST /symbol-art", handleSymbolArt)
 
-
 	// Run server on port 8080
-	err := http.ListenAndServe(":8080", mux)
+	log.Println("Server running on http://localhost:8080")
 
-	if err != nil {
-		// Returns os.Exit(1)
-		log.Fatal(err)
-	}
+	// os.Exit(1) if any error
+	log.Fatal(http.ListenAndServe(":8080", mux))
+
 }
 
 func handleRoot(w http.ResponseWriter, _ *http.Request) {
-	_, err := w.Write([]byte("Welcome to the page !"))
+
+	// Parse index.html file
+	tmpl, err := template.ParseFiles("../../templates/index.html")
 
 	if err != nil {
-		slog.Error("failed to write response", "error", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	
+	// Run template
+	err = tmpl.Execute(w, nil)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
 func handleSymbolArt(w http.ResponseWriter, r *http.Request){}
-
