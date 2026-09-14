@@ -15,6 +15,12 @@ func main() {
 	mux.HandleFunc("GET /", handleRoot)
 	mux.HandleFunc("POST /symbol-art", handleSymbolArt)
 
+	// Return handler and collection of files in the folder 
+	fs := http.FileServer(http.Dir("static"))
+
+	// Handle static files
+	mux.Handle("GET /static/", http.StripPrefix("/static/", fs))
+
 	// Run server on port 8080
 	log.Println("Server running on http://localhost:8080")
 
@@ -26,7 +32,7 @@ func main() {
 func handleRoot(w http.ResponseWriter, _ *http.Request) {
 
 	// Parse index.html file
-	tmpl, err := template.ParseFiles("../../templates/index.html")
+	tmpl, err := template.ParseFiles("templates/index.html")
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
