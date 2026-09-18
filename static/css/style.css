@@ -6,4 +6,11 @@
     display: flex;
     justify-content: center; /* center horizontally */
     gap: 5px; /* space between child items */
+    margin-bottom: 15px; 
+}
+
+.banner-selector-container {
+    display: flex;
+    justify-content: center; /* center horizontally */
+    gap: 5px; /* space between child items */
 }
