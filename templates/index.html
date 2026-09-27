@@ -11,22 +11,20 @@
   <h1 class="main-text">ASCII Art Generator</h1>
 
   <div class="input-container">
+    <form action="/symbol-art" method="POST">
 
-    <input type="text" placeholder="Text to ASCII art">
-    <button type="submit">Draw</button>
+      <input type="text" name="inputWord" placeholder="Text to ASCII art" required>
+      <button type="submit">Draw</button>
 
-  </div>
+        <label for="banners">Choose a banner:</label>
 
-  <div class="banner-selector-container">
+        <select name="banners" id="banners">
+          <option value="standard.txt">Standard</option>
+          <option value="shadow.txt">Shadow</option>
+          <option value="thinkertoy.txt">Thinkertoy</option>
+        </select>
 
-    <label for="banners">Choose a banner:</label>
-
-    <select name="banners" id="banners">
-      <option value="standard">Standard</option>
-      <option value="shadow">Shadow</option>
-      <option value="thinkertoy">Thinkertoy</option>
-    </select>
-
+    </form>
   </div>
 
 </body>

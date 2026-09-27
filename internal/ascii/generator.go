@@ -6,9 +6,6 @@ import (
 	"os"
 )
 
-// Store character with its symbols
-var LookUp map[rune][]string
-
 func Banner(input []rune, fileName string) map[rune][]string {
 	input = []rune(deleteLineBreaks(string(input)))
 
@@ -17,7 +14,7 @@ func Banner(input []rune, fileName string) map[rune][]string {
 	}
 
 	// Initialize the storage
-	LookUp = make(map[rune][]string)
+	lookUp := make(map[rune][]string)
 
 	// Open the file (read-only)
 	file, err := os.Open(fileName)
@@ -33,7 +30,7 @@ func Banner(input []rune, fileName string) map[rune][]string {
 	scanner := bufio.NewScanner(file)
 
 	// Sort characters by ASCII code (ascending order)
-	input = BubbleSort(input)
+	input = bubbleSort(input)
 
 	// Start position of every runes
 	startPos := initPositions(input)
@@ -68,7 +65,7 @@ func Banner(input []rune, fileName string) map[rune][]string {
 				copy(tempCopy, temp)
 
 				// Save the symbol
-				LookUp[target] = tempCopy
+				lookUp[target] = tempCopy
 
 				// Clean the buffer
 				temp = temp[:0]
@@ -96,11 +93,11 @@ func Banner(input []rune, fileName string) map[rune][]string {
 		fmt.Printf("Scanning error: %v\n", err)
 	}
 
-	return LookUp
+	return lookUp
 }
 
 // Function: to sort characters
-func BubbleSort(input []rune) []rune {
+func bubbleSort(input []rune) []rune {
 
 	var temp rune
 

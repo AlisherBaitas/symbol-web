@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 	"html/template"
+	
+	"symbol-web/internal/handlers"
 )
 
 func main() {
@@ -28,6 +30,7 @@ func main() {
 
 }
 
+// GET
 func handleRoot(w http.ResponseWriter, _ *http.Request) {
 
 	// Parse index.html file
@@ -48,4 +51,41 @@ func handleRoot(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-func handleSymbolArt(w http.ResponseWriter, r *http.Request){}
+// POST
+func handleSymbolArt(w http.ResponseWriter, r *http.Request){
+	// Check only using POST method
+	/* 
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	*/
+
+	// Value from FORM
+	inputWord := r.FormValue("inputWord")
+	bannerType := r.FormValue("banners")
+
+	art := handlers.Generate(inputWord, bannerType)
+
+	// Parse result.html file
+	tmpl, err := template.ParseFiles("templates/result.html")
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+    data := struct {
+		ArtMessage string
+	}{
+		ArtMessage: art,
+	}
+
+	// Run template
+	err = tmpl.Execute(w, data)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
