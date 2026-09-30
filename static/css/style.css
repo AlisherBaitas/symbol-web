@@ -1,3 +1,4 @@
+/* index.html */
 .main-text {
     text-align: center;
 }
@@ -6,4 +7,22 @@
     display: flex;
     justify-content: center; /* center horizontally */
     gap: 5px; /* space between child items */ 
+}
+
+/* result.html */
+.result-container {
+    display: flex;
+    justify-content: center; /* center horizontally */
+    border: 1px solid;
+    border-radius: 10px;
+}
+
+#result-text {
+    font-size: 20px;  /* size of symbol art text  */
+    margin: 0;
+}
+
+.main-page-link {
+    display: flex;
+    justify-content: center; /* center horizontally */
 }

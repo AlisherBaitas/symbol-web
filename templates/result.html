@@ -3,15 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../static/css/style.css">
   <title>ASCII Art Generator | Result</title>
 </head>
 <body>
 
-  <pre>
-{{ .ArtMessage }}
-  </pre>
+  <div class="result-container">
+    <pre id="result-text">{{ .ArtMessage }}</pre>
+  </div>
 
-  <a href="templates/index.html">Back to main page</a>
-  
+  <a href="templates/index.html" class="main-page-link">Back to main page</a>
+
 </body>
 </html>
