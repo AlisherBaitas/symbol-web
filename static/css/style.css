@@ -30,6 +30,6 @@
     display: flex;
     justify-content: center; /* center horizontally */
     margin-top: 10px;
-    color: tomato;
+    color: tomato; /* text color */
     text-decoration: none; /* remove underline */
 }
