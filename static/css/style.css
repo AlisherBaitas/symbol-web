@@ -11,18 +11,25 @@
 
 /* result.html */
 .result-container {
+    margin: 10px;
+    width: auto;
+    height: auto;
     display: flex;
     justify-content: center; /* center horizontally */
-    border: 1px solid;
     border-radius: 10px;
+    background-color: black;
 }
 
 #result-text {
     font-size: 20px;  /* size of symbol art text  */
-    margin: 0;
+    margin: 5px 0px; /* top-bottom: 5px, right-left: 0px */
+    color: green; /* text color */
 }
 
 .main-page-link {
     display: flex;
     justify-content: center; /* center horizontally */
+    margin-top: 10px;
+    color: tomato;
+    text-decoration: none; /* remove underline */
 }
