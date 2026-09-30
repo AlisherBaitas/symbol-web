@@ -17,6 +17,11 @@ func main() {
 	mux.HandleFunc("GET /", handleRoot)
 	mux.HandleFunc("POST /symbol-art", handleSymbolArt)
 
+	// AI endpoints
+	mux.HandleFunc("POST /api/suggest", handleSuggestion)
+	mux.HandleFunc("POST /api/recommend-banner", handleBannerRec)
+	mux.HandleFunc("POST /api/variations", handleVariation)
+
 	// Return handler and collection of files in the folder 
 	fs := http.FileServer(http.Dir("static"))
 
@@ -89,3 +94,11 @@ func handleSymbolArt(w http.ResponseWriter, r *http.Request){
 		return
 	}
 }
+
+
+func handleSuggestion(w http.ResponseWriter, r *http.Request) {}
+
+func handleBannerRec(w http.ResponseWriter, r *http.Request) {}
+
+func handleVariation(w http.ResponseWriter, r *http.Request) {}
+
