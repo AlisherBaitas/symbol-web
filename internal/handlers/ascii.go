@@ -11,10 +11,12 @@ func Generate(input string, fileName string) string {
 	// Return map with chars and symbols
 	symStore := ascii.Banner([]rune(input), fileName)
 
+	// Call to save the result of symbol art
 	printer(symStore, input)
 
 	resArt := artResult
 
+	// Clean the global var
 	artResult = ""
 
 	return resArt
