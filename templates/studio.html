@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="Превратите текст в ASCII-арт: три стиля, подсказки и сохранение результата.">
+  <title>Symbol Studio — искусство из символов</title>
+  <link rel="stylesheet" href="/static/css/studio.css">
+  <script src="/static/js/studio.js" defer></script>
+</head>
+<body data-mode="{{.Mode}}">
+  <a class="skip-link" href="#workspace">Перейти к генератору</a>
+  <header class="site-header wrap">
+    <a class="brand" href="/" aria-label="Symbol Studio — главная"><span class="brand-icon" aria-hidden="true">S<span>_</span></span><span>symbol<span class="brand-light">studio</span><span class="brand-dot">.</span></span></a>
+    <span class="header-note">Маленький инструмент. Большие буквы.</span>
+    <a class="help-link" href="#how-it-works">Как это работает <span aria-hidden="true">↗</span></a>
+  </header>
+  <main class="wrap">
+    <section class="hero" aria-labelledby="hero-title">
+      <div><p class="eyebrow"><span class="tiny-star" aria-hidden="true">✳</span> СЛОВА С ХАРАКТЕРОМ</p>
+<h1 id="hero-title">Обычный текст.<br><span>Необычный вид.</span></h1>
+<p class="hero-description">Соберите свой ASCII-арт из букв и символов.<br>Для README, сообщений и маленьких творческих идей.</p></div>
+      <div class="hero-art" aria-hidden="true"><span class="sample-tag">100% ТЕКСТ · 0 ПИКСЕЛЕЙ</span><pre>  _   _      _ _
+ | | | | ___| | | ___
+ | |_| |/ _ \ | |/ _ \
+ |  _  |  __/ | | (_) |
+ |_| |_|\___|_|_|\___/</pre><span class="sample-caption"><span>HELLO, SYMBOL!</span><span>↗</span></span></div>
+    </section>
+
+    <section id="workspace" class="workspace" aria-label="Генератор ASCII-арта">
+      <div class="editor-panel panel">
+        <div class="panel-heading"><h2><span class="step">01</span> Создайте надпись</h2>
+<span id="mode-badge" class="mode-badge">{{if eq .Mode "mock"}}Демо · без ключа{{else}}Внешняя LLM{{end}}</span></div>
+        <form id="art-form" action="/symbol-art" method="post">
+          <div class="field-heading"><label for="text-input">Ваш текст</label><span id="char-count">0 / 1000</span></div>
+          <textarea id="text-input" name="inputWord" rows="4" maxlength="1000" required placeholder="Hello, world!" aria-describedby="input-help input-error">{{.Text}}</textarea>
+          <p id="input-help" class="hint">Латинские буквы, цифры, знаки и переносы строк.</p>
+          <p id="input-error" class="field-error" role="alert" hidden></p>
+          <div id="suggestions-area" hidden><div class="small-label">Продолжить мысль</div>
+<div id="suggestions-dropdown" class="suggestions" aria-label="Варианты продолжения"></div>
+</div>
+          <p id="suggestions-status" class="hint" role="status" aria-live="polite"></p>
+          <fieldset class="banner-field"><legend>Характер надписи</legend><div class="banner-grid">
+
+            <label class="banner-card"><input type="radio" name="banners" value="standard" {{if eq .Banner "standard"}}checked{{end}} required><span class="banner-preview">Aa</span><span class="banner-name">Standard</span><span class="banner-caption">Классический</span></label>
+            <label class="banner-card"><input type="radio" name="banners" value="shadow" {{if eq .Banner "shadow"}}checked{{end}}><span class="banner-preview shadow-preview">Aa</span><span class="banner-name">Shadow</span><span class="banner-caption">Выразительный</span></label>
+            <label class="banner-card"><input type="radio" name="banners" value="thinkertoy" {{if eq .Banner "thinkertoy"}}checked{{end}}><span class="banner-preview toy-preview">Aa</span><span class="banner-name">Thinkertoy</span><span class="banner-caption">Игривый</span></label>
+          </div>
+</fieldset>
+          <div class="assistant-actions"><button id="recommend-button" class="button button-quiet" type="button" disabled><span aria-hidden="true">✧</span> Подобрать стиль</button><button id="ideas-button" class="button button-quiet" type="button" disabled><span aria-hidden="true">＋</span> Идеи для текста</button></div>
+          <p id="assistant-status" class="hint" role="status" aria-live="polite"></p>
+          <div id="recommendation-result" class="recommendation" role="status" hidden></div>
+          <div id="variations-panel" class="variations" aria-label="Творческие варианты" hidden></div>
+          <button id="generate-button" class="button button-primary" type="submit">Создать ASCII-арт <span aria-hidden="true">↗</span></button>
+        </form>
+        <noscript><p class="hint">Генератор работает без JavaScript. Для подсказок, истории и копирования включите JavaScript.</p></noscript>
+      </div>
+
+      <div class="preview-panel panel">
+        <div class="panel-heading"><h2><span class="step">02</span> Ваш результат</h2>
+<span class="preview-label">PREVIEW</span></div>
+        <div class="canvas-toolbar"><span><span class="status-dot" aria-hidden="true"></span><span id="output-label">{{if .Art}}{{.Banner}}{{else}}Готов к творчеству{{end}}</span></span><span class="file-type">.TXT</span></div>
+        <div id="output-canvas" class="output-canvas" aria-busy="false">
+          <div id="empty-state" class="empty-state" {{if .Art}}hidden{{end}}><div class="empty-symbol" aria-hidden="true">[ Aa ]</div>
+<h3>Здесь появится ваша идея</h3><p>Напишите пару слов, выберите стиль<br>и нажмите «Создать ASCII-арт».</p><button class="example-link" id="example-button" type="button" disabled>Попробовать с «Hello, world!» <span aria-hidden="true">→</span></button></div>
+          <pre id="art-output" tabindex="0" aria-label="ASCII-арт; прокрутите горизонтально для длинной надписи" {{if not .Art}}hidden{{end}}>{{.Art}}</pre>
+        </div>
+        <div class="output-footer"><p id="output-status" role="status" aria-live="polite">{{if .Art}}Готово. Сохраните или скопируйте результат.{{else}}Ваш следующий маленький шедевр.{{end}}</p><div class="output-actions"><button id="copy-button" type="button" class="button button-secondary" disabled>Копировать</button><button id="download-button" type="button" class="button button-secondary" disabled>Скачать .txt <span aria-hidden="true">↓</span></button></div>
+</div>
+        <div class="history-area"><div class="history-heading"><h3>Недавние надписи</h3><button id="clear-history" type="button" class="text-button" hidden>Очистить</button></div>
+<p id="history-empty" class="hint">Последние 8 надписей сохраняются только в этом браузере.</p><div id="history-list" class="history-list"></div>
+</div>
+      </div>
+    </section>
+
+    <section id="how-it-works" class="guide" aria-labelledby="guide-title"><div><p class="eyebrow">ВСЁ ПРОСТО</p><h2 id="guide-title">Три шага к своему стилю.</h2>
+</div>
+<ol><li><span>1</span><div><h3>Напишите</h3><p>Одну строку или целое сообщение на латинице.</p></div>
+</li>
+<li><span>2</span><div><h3>Поэкспериментируйте</h3><p>Три шрифта, подсказки и идеи для вдохновения.</p></div>
+</li>
+<li><span>3</span><div><h3>Сохраните</h3><p>Копируйте в моноширинный блок или скачивайте .txt.</p></div>
+</li>
+</ol>
+</section>
+    <aside class="mode-note">{{if eq .Mode "mock"}}Подсказки работают в демо-режиме: готовые варианты без внешнего AI-сервиса.{{else}}Подсказки и идеи отправляют введённый текст настроенному LLM-сервису.{{end}} Подбор стиля всегда работает по локальным правилам.</aside>
+  </main>
+  <footer class="site-footer wrap"><span>symbolstudio. <span class="footer-muted">Сделано из символов.</span></span><span>asamat · abaitas · ysoltamb</span></footer>
+</body>
+</html>
