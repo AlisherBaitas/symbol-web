@@ -42,9 +42,9 @@
           <p id="suggestions-status" class="hint" role="status" aria-live="polite"></p>
           <fieldset class="banner-field"><legend>Характер надписи</legend><div class="banner-grid">
 
-            <label class="banner-card"><input type="radio" name="banners" value="standard" {{if eq .Banner "standard"}}checked{{end}} required><span class="banner-preview">Aa</span><span class="banner-name">Standard</span><span class="banner-caption">Классический</span></label>
-            <label class="banner-card"><input type="radio" name="banners" value="shadow" {{if eq .Banner "shadow"}}checked{{end}}><span class="banner-preview shadow-preview">Aa</span><span class="banner-name">Shadow</span><span class="banner-caption">Выразительный</span></label>
-            <label class="banner-card"><input type="radio" name="banners" value="thinkertoy" {{if eq .Banner "thinkertoy"}}checked{{end}}><span class="banner-preview toy-preview">Aa</span><span class="banner-name">Thinkertoy</span><span class="banner-caption">Игривый</span></label>
+            <label class="banner-card"><input type="radio" name="banners" value="standard" {{if eq .Banner "standard"}}checked{{end}} required><span class="banner-name">Standard</span><span class="banner-caption">Классический</span></label>
+            <label class="banner-card"><input type="radio" name="banners" value="shadow" {{if eq .Banner "shadow"}}checked{{end}}><span class="banner-name">Shadow</span><span class="banner-caption">Выразительный</span></label>
+            <label class="banner-card"><input type="radio" name="banners" value="thinkertoy" {{if eq .Banner "thinkertoy"}}checked{{end}}><span class="banner-name">Thinkertoy</span><span class="banner-caption">Игривый</span></label>
           </div>
 </fieldset>
           <div class="assistant-actions"><button id="recommend-button" class="button button-quiet" type="button" disabled><span aria-hidden="true">✧</span> Подобрать стиль</button><button id="ideas-button" class="button button-quiet" type="button" disabled><span aria-hidden="true">＋</span> Идеи для текста</button></div>
