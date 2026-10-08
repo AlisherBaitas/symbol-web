@@ -9,6 +9,13 @@
     gap: 5px; /* space between child items */ 
 }
 
+.ai-btns-container {
+    display: flex;
+    justify-content: center; /* center horizontally */
+    align-items: center; /* center vertically */
+    gap: 5px;
+}
+
 /* result.html */
 .result-container {
     margin: 10px;
