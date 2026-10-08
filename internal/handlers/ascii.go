@@ -1,108 +1,68 @@
 package handlers
 
 import (
+	"net/http"
+	"html/template"
+
 	"symbol-web/internal/ascii"
 )
 
-var artResult string
+// GET
+func HandleRoot(w http.ResponseWriter, _ *http.Request) {
 
-func Generate(input string, fileName string) string {
+	// Parse index.html file
+	tmpl, err := template.ParseFiles("../templates/index.html")
 
-	// Return map with chars and symbols
-	symStore := ascii.Banner([]rune(input), fileName)
-
-	// Call to save the result of symbol art
-	printer(symStore, input)
-
-	resArt := artResult
-
-	// Clean the global var
-	artResult = ""
-
-	return resArt
-}
-
-func printer(lookUp map[rune][]string, input string) {
-
-	if len(input) == 0 {
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// To convert new lines into '\n'
-	input = convertLineBreaks(input)
+	
+	// Run template
+	err = tmpl.Execute(w, nil) // nil, because of no data
 
-	var temp []rune
-
-	for i := 0; i < len(input); i++ {
-
-		if input[i] == '\n' {
-
-			// Print symbols before new line
-			if len(temp) != 0 {
-				word := string(temp)
-				temp = temp[:0]
-				printRow(lookUp, word)
-			}
-
-			// If new line at start or at the end of the string
-			if i == 0 || i == len(input)-1 {
-				artResult += "\n"
-			}
-
-			// If between runes more than one '\n'
-			j := i
-			for j+1 < len(input) && input[j+1] == '\n' {
-				artResult += "\n"
-				j++
-			}
-
-		} else if input[i] != '\n' {
-			temp = append(temp, rune(input[i]))
-		}
-	}
-
-	if len(temp) != 0 {
-		word := string(temp)
-		temp = temp[:0]
-		printRow(lookUp, word)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
-// Function: to print symbols
-func printRow(lookUp map[rune][]string, input string) {
-	lines := 0
-	inputLen := len(input)
-
-	for lines < 8 {
-		currSymbol := 0
-
-		for currSymbol < inputLen {
-			currInput := lookUp[rune(input[currSymbol])]
-
-			for _, val := range currInput[lines] {
-				artResult += string(val)
-
-			}
-			currSymbol++
-		}
-
-		artResult += "\n"
-		lines++
+// POST
+func HandleSymbolArt(w http.ResponseWriter, r *http.Request){
+	// Check only using POST method
+	/* 
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
-}
+	*/
 
-// Function: to convert '\n' to new line
-func convertLineBreaks(input string) string {
-	temp := make([]rune, 0, len(input))
+	// Value from FORM
+	inputWord := r.FormValue("inputWord")
+	bannerType := r.FormValue("banners")
 
-	for i := 0; i < len(input); i++ {
-		if input[i] == '\\' && i+1 < len(input) && input[i+1] == 'n' {
-			temp = append(temp, '\n')
-			i++
-		} else {
-			temp = append(temp, rune(input[i]))
-		}
+	art := ascii.Generate(inputWord, bannerType)
+
+	// Parse result.html file
+	tmpl, err := template.ParseFiles("../templates/result.html")
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	return string(temp)
+    data := struct {
+		ArtMessage string
+	}{
+		ArtMessage: art,
+	}
+
+	// Run template
+	err = tmpl.Execute(w, data)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
