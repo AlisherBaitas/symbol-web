@@ -11,7 +11,7 @@ import (
 func HandleRoot(w http.ResponseWriter, _ *http.Request) {
 
 	// Parse index.html file
-	tmpl, err := template.ParseFiles("../templates/index.html")
+	tmpl, err := template.ParseFiles("templates/index.html")
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -45,7 +45,7 @@ func HandleSymbolArt(w http.ResponseWriter, r *http.Request){
 	art := ascii.Generate(inputWord, bannerType)
 
 	// Parse result.html file
-	tmpl, err := template.ParseFiles("../templates/result.html")
+	tmpl, err := template.ParseFiles("templates/result.html")
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
