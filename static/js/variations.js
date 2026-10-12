@@ -1,13 +1,13 @@
 "use strict";
 
-// Template integration: load <script src="/static/js/variations.js" defer></script>.
-// POST /api/variations accepts {text} and returns {variations: [{text,
-// description, suggested_banner}]}. The HTTP handler belongs to the handlers team.
+// Подключение в шаблоне: <script src="/static/js/variations.js" defer></script>.
+// POST /api/variations принимает {text} и возвращает {variations: [{text,
+// description, suggested_banner}]}. HTTP-обработчик реализует команда обработчиков.
 (() => {
   const MAX_TEXT_LENGTH = 1000;
   const MAX_VARIATION_LENGTH = 49;
   const MAX_DESCRIPTION_LENGTH = 29;
-  // The backend has 10 seconds for the LLM call; allow time for the HTTP round trip.
+  // Серверу даётся 10 секунд на вызов LLM; добавляем время на передачу HTTP-запроса и ответа.
   const REQUEST_TIMEOUT_MS = 12000;
   const BANNERS = new Set(["standard", "shadow", "thinkertoy"]);
   const INVALID_RESPONSE = "The server returned invalid ideas. Please try again.";
@@ -24,7 +24,7 @@
     const input = document.querySelector('[name="inputWord"]');
     const bannerSelect = document.querySelector("#banners");
 
-    // Other pages, including studio.html, manage their own controls in studio.js.
+    // На других страницах, включая studio.html, элементы интерфейса обслуживает studio.js.
     if (!button || !panel || !input || !bannerSelect) return;
     if (button.dataset.variationsInitialized === "true") return;
     button.dataset.variationsInitialized = "true";
@@ -107,7 +107,7 @@
     }
 
     function selectVariation(variation) {
-      // The original form uses standard.txt; other select menus may use standard.
+      // Исходная форма использует standard.txt; в других списках значение может быть standard.
       const option = Array.from(bannerSelect.options).find((item) =>
         item.value === variation.suggested_banner ||
         item.value === `${variation.suggested_banner}.txt`);
@@ -119,7 +119,7 @@
       closeIdeas();
       input.value = variation.text;
       bannerSelect.value = option.value;
-      // Notify suggestions, character counters, and any other form listeners.
+      // Уведомляем подсказки, счётчики символов и остальные обработчики событий формы.
       input.dispatchEvent(new Event("input", { bubbles: true }));
       bannerSelect.dispatchEvent(new Event("change", { bubbles: true }));
       input.focus();
@@ -162,7 +162,7 @@
       showMessage("Creating ideas…");
       setLoading(true);
 
-      // Identity protects against an older response, even after editing A → B → A.
+      // Сравнение объектов запросов защищает от устаревшего ответа даже после изменения A → B → A.
       function isCurrentRequest() {
         return activeRequest === request && input.value === text;
       }
