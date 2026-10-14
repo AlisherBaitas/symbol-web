@@ -17,6 +17,7 @@ func main() {
 	mux.HandleFunc("POST /symbol-art", handlers.HandleSymbolArt)
 
 	// AI endpoints
+	// [Suggestions] Подсказки при вводе: static/js/suggestions.js -> handlers.HandleSuggestion
 	mux.HandleFunc("POST /api/suggest", handlers.HandleSuggestion)
 	mux.HandleFunc("POST /api/recommend-banner", handlers.HandleBannerRec)
 	mux.HandleFunc("POST /api/variations", handlers.HandleVariation)
