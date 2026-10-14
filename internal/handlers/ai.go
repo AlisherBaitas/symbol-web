@@ -26,6 +26,12 @@ func HandleSuggestion(w http.ResponseWriter, r *http.Request) {
 		writeVariationError(w, http.StatusBadRequest, "Enter at most 1000 characters.")
 		return
 	}
+	// [Validation] Те же символы, что умеет рисовать генератор: иначе подсказку
+	// с кириллицей или переносом строки потом нельзя нарисовать.
+	if _, message := validateArtText(text); message != "" && text != "" {
+		writeVariationError(w, http.StatusBadRequest, message)
+		return
+	}
 
 	// [Suggestions] Без LLM_BASE_URL клиент работает в демо-режиме (mockSuggestions).
 	suggestions, err := ai.NewAIClient().GetSuggestions(r.Context(), text)
@@ -49,7 +55,11 @@ func HandleSuggestion(w http.ResponseWriter, r *http.Request) {
 	}{Suggestions: suggestions})
 }
 
-func HandleBannerRec(w http.ResponseWriter, r *http.Request) {}
+// [Validation] Рекомендация баннера ещё не реализована. Раньше пустой обработчик
+// отвечал 200 с пустым телом, будто всё в порядке; теперь честно 501.
+func HandleBannerRec(w http.ResponseWriter, r *http.Request) {
+	writeVariationError(w, http.StatusNotImplemented, "Banner recommendation is not available yet.")
+}
 
 // HandleVariation принимает JSON с текстом и возвращает проверенные творческие варианты.
 func HandleVariation(w http.ResponseWriter, r *http.Request) {

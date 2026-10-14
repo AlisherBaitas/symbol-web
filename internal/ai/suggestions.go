@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"regexp"
 	"strings"
@@ -17,6 +18,8 @@ const (
 	minSuggestions     = 3
 	maxSuggestions     = 5
 	maxSuggestionChars = 50
+	// [Validation] Ограничение размера ответа LLM, как у вариаций.
+	maxSuggestReplyBytes = 64 * 1024
 )
 
 var (
@@ -84,6 +87,13 @@ func (c *AIClient) GetSuggestions(ctx context.Context, text string) ([]string, e
 
 // mockSuggestions builds canned suggestions that depend only on the input
 func mockSuggestions(text string) []string {
+	// [Validation] Переносы и повторные пробелы -> один пробел; длинный текст
+	// сокращаем, чтобы каждая подсказка была короче 50 символов (самый длинный
+	// вариант добавляет " World", 6 символов).
+	text = strings.Join(strings.Fields(text), " ")
+	if len(text) > maxSuggestionChars-7 {
+		text = text[:maxSuggestionChars-10] + "..."
+	}
 	return []string{
 		text + "!",
 		text + " World",
@@ -123,8 +133,10 @@ func (c *AIClient) chatSuggest(ctx context.Context, prompt string) (string, erro
 		return "", fmt.Errorf("%w: status %d", ErrInvalidLLMResponse, resp.StatusCode)
 	}
 
+	// [Validation] Не читаем ответ LLM больше 64 КиБ.
 	var parsed chatResponse
-	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+	// Было json.NewDecoder(resp.Body) без ограничения.
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxSuggestReplyBytes)).Decode(&parsed); err != nil {
 		return "", fmt.Errorf("%w: %v", ErrInvalidLLMResponse, err)
 	}
 	if len(parsed.Choices) == 0 {
@@ -157,6 +169,10 @@ func parseSuggestions(answer string) []string {
 		if line == "" || utf8.RuneCountInString(line) >= maxSuggestionChars {
 			continue
 		}
+		// [Validation] Подсказку должно быть можно нарисовать: только печатный ASCII.
+		if !printableASCII(line) {
+			continue
+		}
 		key := strings.ToLower(line)
 		if seen[key] {
 			continue
@@ -169,4 +185,15 @@ func parseSuggestions(answer string) []string {
 		}
 	}
 	return result
+}
+
+// [Validation] printableASCII сообщает, состоит ли строка только из символов 32-126,
+// которые есть в файлах баннеров.
+func printableASCII(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] < ' ' || s[i] > '~' {
+			return false
+		}
+	}
+	return true
 }
