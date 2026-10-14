@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ASCII Art Generator</title>
   <link rel="stylesheet" href="/static/css/style.css">
+  <!-- [Suggestions] Подключение скриптов: подсказки при вводе и творческие идеи -->
+  <script src="/static/js/suggestions.js" defer></script>
+  <script src="/static/js/variations.js" defer></script>
 </head>
 <body>
 
@@ -13,7 +16,12 @@
   <div class="input-container">
     <form action="/symbol-art" method="POST">
 
-      <input type="text" name="inputWord" placeholder="Text to ASCII art" required>
+      <!-- [Suggestions] Обёртка поля ввода: к ней привязан выпадающий список подсказок.
+           Список #suggestions-dropdown заполняет static/js/suggestions.js -->
+      <div class="input-wrapper">
+        <input type="text" name="inputWord" placeholder="Text to ASCII art" autocomplete="off" required>
+        <div id="suggestions-dropdown" class="suggestions hidden"></div>
+      </div>
       <button type="submit">Draw</button>
 
         <label for="banners">Choose a banner:</label>
