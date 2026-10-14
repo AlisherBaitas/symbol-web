@@ -25,6 +25,7 @@
 /* [Suggestions] Выпадающий список подсказок под полем ввода (static/js/suggestions.js) */
 .input-wrapper {
     position: relative; /* anchor for the dropdown */
+    display: inline-block; /* keep Draw button and banner select on the same line */
 }
 
 .suggestions {
