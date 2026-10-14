@@ -67,6 +67,15 @@
     background-color: #eee;
 }
 
+/* [Validation] error.html: страница ошибки 400/404/413/500 (раньше файл был пустым) */
+.error-container {
+    text-align: center;
+}
+
+.error-message {
+    font-size: 18px;
+}
+
 /* result.html */
 .result-container {
     margin: 10px;

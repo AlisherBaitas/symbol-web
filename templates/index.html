@@ -19,7 +19,8 @@
       <!-- [Suggestions] Обёртка поля ввода: к ней привязан выпадающий список подсказок.
            Список #suggestions-dropdown заполняет static/js/suggestions.js -->
       <div class="input-wrapper">
-        <input type="text" name="inputWord" placeholder="Text to ASCII art" autocomplete="off" required>
+        <!-- [Validation] maxlength="1000": браузер не даст ввести больше лимита сервера -->
+        <input type="text" name="inputWord" placeholder="Text to ASCII art" autocomplete="off" maxlength="1000" required>
         <div id="suggestions-dropdown" class="suggestions hidden"></div>
       </div>
       <button type="submit">Draw</button>

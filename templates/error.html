@@ -3,9 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <title>ASCII Art Generator | Error {{ .Code }}</title>
 </head>
 <body>
-  
+
+  <!-- [Validation] Страница ошибки: код, название и понятное сообщение для пользователя -->
+  <div class="error-container">
+    <h1 class="main-text">{{ .Code }} {{ .Title }}</h1>
+    <p class="error-message">{{ .Message }}</p>
+  </div>
+
+  <a href="/" class="main-page-link">Back to main page</a>
+
 </body>
 </html>

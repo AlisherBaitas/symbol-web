@@ -2,32 +2,49 @@ package ascii
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
+	"strings"
 )
 
-var artResult string
+var (
+	// [Validation] Ошибки вместо os.Exit и паники: обработчик превращает их в 400/404/500.
+	// ErrUnsupportedChar - в тексте есть символ, которого нет в шрифте (кириллица, Tab и т.п.)
+	ErrUnsupportedChar = errors.New("text contains a character that is not in the banner")
+	// ErrBannerNotFound - файл баннера не найден на диске
+	ErrBannerNotFound = errors.New("banner file not found")
+	// ErrBannerCorrupted - файл баннера не читается или в нём не хватает строк
+	ErrBannerCorrupted = errors.New("banner file is corrupted")
+)
 
-func Generate(input string, fileName string) string {
+// [Validation] Generate возвращает ошибку вместо падения сервера.
+// Результат собирается в локальном strings.Builder, а не в глобальной переменной:
+// раньше одновременные запросы и упавшие запросы портили ответы друг другу.
+func Generate(input string, fileName string) (string, error) {
 
 	// Return map with chars and symbols
-	symStore := banner([]rune(input), fileName)
+	symStore, err := banner([]rune(input), fileName)
+	if err != nil {
+		return "", err
+	}
+
+	var art strings.Builder
 
 	// Call to save the result of symbol art
-	printer(symStore, input)
+	if err := printer(&art, symStore, input); err != nil {
+		return "", err
+	}
 
-	resArt := artResult
-
-	// Clean the global var
-	artResult = ""
-
-	return resArt
+	return art.String(), nil
 }
 
-func printer(lookUp map[rune][]string, input string) {
+// [Validation] printer пишет в переданный art вместо глобальной artResult
+// и возвращает ошибку от printRow, а не продолжает с неполными данными.
+func printer(art *strings.Builder, lookUp map[rune][]string, input string) error {
 
 	if len(input) == 0 {
-		return
+		return nil
 	}
 
 	// To convert new lines into '\n'
@@ -43,18 +60,21 @@ func printer(lookUp map[rune][]string, input string) {
 			if len(temp) != 0 {
 				word := string(temp)
 				temp = temp[:0]
-				printRow(lookUp, word)
+				if err := printRow(art, lookUp, word); err != nil {
+					return err
+				}
 			}
 
 			// If new line at start or at the end of the string
+			// [Validation] Было artResult += "\n" (глобальная переменная).
 			if i == 0 || i == len(input)-1 {
-				artResult += "\n"
+				art.WriteString("\n")
 			}
 
 			// If between runes more than one '\n'
 			j := i
 			for j+1 < len(input) && input[j+1] == '\n' {
-				artResult += "\n"
+				art.WriteString("\n")
 				j++
 			}
 
@@ -66,12 +86,23 @@ func printer(lookUp map[rune][]string, input string) {
 	if len(temp) != 0 {
 		word := string(temp)
 		temp = temp[:0]
-		printRow(lookUp, word)
+		if err := printRow(art, lookUp, word); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // Function: to print symbols
-func printRow(lookUp map[rune][]string, input string) {
+func printRow(art *strings.Builder, lookUp map[rune][]string, input string) error {
+	// [Validation] Раньше символ без картинки в шрифте давал панику
+	// "index out of range" на currInput[lines]. Проверяем все символы заранее.
+	for i := 0; i < len(input); i++ {
+		if len(lookUp[rune(input[i])]) != 8 {
+			return fmt.Errorf("%w: %q", ErrUnsupportedChar, input[i])
+		}
+	}
+
 	lines := 0
 	inputLen := len(input)
 
@@ -81,24 +112,25 @@ func printRow(lookUp map[rune][]string, input string) {
 		for currSymbol < inputLen {
 			currInput := lookUp[rune(input[currSymbol])]
 
-			for _, val := range currInput[lines] {
-				artResult += string(val)
-
-			}
+			// [Validation] Было посимвольное artResult += string(val):
+			// глобальная переменная и квадратичная склейка строк.
+			art.WriteString(currInput[lines])
 			currSymbol++
 		}
 
-		artResult += "\n"
+		art.WriteString("\n")
 		lines++
 	}
+	return nil
 }
 
 
-func banner(input []rune, fileName string) map[rune][]string {
+// [Validation] banner теперь возвращает ошибку вместо os.Exit и печати в консоль.
+func banner(input []rune, fileName string) (map[rune][]string, error) {
 	input = []rune(deleteLineBreaks(string(input)))
 
 	if len(input) == 0 {
-		return map[rune][]string{}
+		return map[rune][]string{}, nil
 	}
 
 	// Initialize the storage
@@ -107,9 +139,13 @@ func banner(input []rune, fileName string) map[rune][]string {
 	// Open the file (read-only)
 	file, err := os.Open(fileName)
 
+	// [Validation] Раньше здесь был os.Exit(1): один запрос с неверным баннером
+	// завершал весь сервер. Теперь возвращаем ошибку.
 	if err != nil {
-		fmt.Printf("Error opening file: %v\n", err)
-		os.Exit(1)
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, fmt.Errorf("%w: %s", ErrBannerNotFound, fileName)
+		}
+		return nil, fmt.Errorf("%w: %v", ErrBannerCorrupted, err)
 	}
 
 	defer file.Close()
@@ -177,11 +213,12 @@ func banner(input []rune, fileName string) map[rune][]string {
 		lineNumber++
 	}
 
+	// [Validation] Ошибка чтения (например, папка вместо файла) больше не игнорируется.
 	if err := scanner.Err(); err != nil {
-		fmt.Printf("Scanning error: %v\n", err)
+		return nil, fmt.Errorf("%w: %v", ErrBannerCorrupted, err)
 	}
 
-	return lookUp
+	return lookUp, nil
 }
 
 // Function: to sort characters
