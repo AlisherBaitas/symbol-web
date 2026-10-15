@@ -29,6 +29,12 @@ var allowedBanners = map[string]bool{
 	"thinkertoy.txt": true,
 }
 
+type artPageData struct {
+	Text       string
+	Banner     string
+	ArtMessage string
+}
+
 // GET
 func HandleRoot(w http.ResponseWriter, r *http.Request) {
 	// [Validation] Маршрут "GET /" ловит все пути; неизвестные отдаём как 404,
@@ -39,7 +45,7 @@ func HandleRoot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// [Validation] Шаблон выполняется в буфер: ошибка шаблона -> 500 без утечки err.Error().
-	renderPage(w, "templates/index.html", nil)
+	renderPage(w, "templates/index.html", artPageData{Banner: "standard.txt"})
 }
 
 // POST
@@ -98,14 +104,14 @@ func HandleSymbolArt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := struct {
-		ArtMessage string
-	}{
+	data := artPageData{
+		Text:       inputWord,
+		Banner:     bannerType,
 		ArtMessage: art,
 	}
 
 	// [Validation] Раньше ошибка шаблона отдавала пользователю err.Error() с путями к файлам.
-	renderPage(w, "templates/result.html", data)
+	renderPage(w, "templates/index.html", data)
 }
 
 // [Validation] validateArtText возвращает нормализованный текст или сообщение об ошибке.

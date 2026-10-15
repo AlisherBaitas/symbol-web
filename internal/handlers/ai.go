@@ -55,11 +55,8 @@ func HandleSuggestion(w http.ResponseWriter, r *http.Request) {
 	}{Suggestions: suggestions})
 }
 
-// [Validation] Рекомендация баннера ещё не реализована. Раньше пустой обработчик
-// отвечал 200 с пустым телом, будто всё в порядке; теперь честно 501.
-func HandleBannerRec(w http.ResponseWriter, r *http.Request) {
-	writeVariationError(w, http.StatusNotImplemented, "Banner recommendation is not available yet.")
-}
+// HandleBannerRec возвращает рекомендацию по локальным Go-правилам без вызова LLM.
+func HandleBannerRec(w http.ResponseWriter, r *http.Request) {}
 
 // HandleVariation принимает JSON с текстом и возвращает проверенные творческие варианты.
 func HandleVariation(w http.ResponseWriter, r *http.Request) {

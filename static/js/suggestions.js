@@ -3,7 +3,7 @@
 // [Suggestions] Клиентская часть подсказок (автодополнение текста под полем ввода).
 // Работает на index.html вместе с:
 //   - разметкой #suggestions-dropdown в templates/index.html;
-//   - стилями .suggestions / .suggestion в static/css/style.css;
+//   - стилями .suggestions / .suggestion в static/css/studio.css;
 //   - обработчиком handlers.HandleSuggestion (internal/handlers/ai.go);
 //   - логикой ai.GetSuggestions (internal/ai/suggestions.go).
 // Подключение в шаблоне: <script src="/static/js/suggestions.js" defer></script>.
@@ -25,19 +25,26 @@
     const input = document.querySelector('[name="inputWord"]');
     const dropdown = document.querySelector("#suggestions-dropdown");
 
-    // На studio.html подсказки обслуживает studio.js.
     if (!input || !dropdown) return;
     if (input.dataset.suggestionsInitialized === "true") return;
     input.dataset.suggestionsInitialized = "true";
+    const area = document.querySelector("#suggestions-area") || dropdown;
+    const counter = document.querySelector("#char-count");
 
-    const status = document.createElement("p");
+    const existingStatus = document.querySelector("#suggestions-status");
+    const status = existingStatus || document.createElement("p");
+    status.className = "hint";
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
 
     const list = document.createElement("ul");
-    dropdown.replaceChildren(status, list);
-    dropdown.setAttribute("aria-label", "Text suggestions");
+    list.className = "suggestions-list";
+    if (existingStatus) dropdown.replaceChildren(list);
+    else dropdown.replaceChildren(status, list);
+    dropdown.setAttribute("aria-label", "Варианты продолжения");
     dropdown.hidden = true;
+    area.hidden = true;
+    if (counter) counter.textContent = `${input.value.length} / ${MAX_TEXT_LENGTH}`;
 
     let debounce = null;
     let activeRequest = null;
@@ -58,6 +65,7 @@
     function hideSuggestions() {
       cancelRequest();
       dropdown.hidden = true;
+      area.hidden = true;
       dropdown.classList.add("hidden");
       list.replaceChildren();
       status.textContent = "";
@@ -65,6 +73,7 @@
 
     function showMessage(message) {
       dropdown.hidden = false;
+      area.hidden = false;
       dropdown.classList.remove("hidden");
       list.replaceChildren();
       status.textContent = message;
@@ -74,7 +83,7 @@
     function readSuggestions(data) {
       if (!data || !Array.isArray(data.suggestions) || data.suggestions.length === 0 ||
           !data.suggestions.every((value) => typeof value === "string" && value.trim())) {
-        throw new Error("The server returned invalid suggestions. Please try again.");
+        throw new Error("Сервер вернул некорректные подсказки. Попробуйте ещё раз.");
       }
       return data.suggestions;
     }
@@ -102,7 +111,7 @@
         return item;
       });
       list.replaceChildren(...items);
-      status.textContent = "Choose a suggestion or keep typing.";
+      status.textContent = "Выберите вариант или продолжайте писать.";
     }
 
     // [Suggestions] Запрос к POST /api/suggest с тайм-аутом и защитой от устаревших ответов.
@@ -117,7 +126,7 @@
         request.timedOut = true;
         request.controller.abort();
       }, REQUEST_TIMEOUT_MS);
-      showMessage("Loading suggestions…");
+      showMessage("Подбираем продолжения…");
       dropdown.setAttribute("aria-busy", "true");
 
       // Сравнение объектов запросов защищает от устаревшего ответа даже после изменения A → B → A.
@@ -133,27 +142,29 @@
           signal: request.controller.signal,
         });
         if (!isCurrentRequest()) return;
+        if (request.timedOut) throw new Error("Request timed out");
         if (!response.ok) {
-          const message = response.status === 400 ? "The text was rejected. Check your input and try again." :
-            response.status === 503 ? "The suggestions service is unavailable. Please try again later." :
-            "Could not load suggestions. Please try again.";
+          const message = response.status === 400 ? "Проверьте введённый текст и попробуйте ещё раз." :
+            response.status === 503 ? "Подсказки временно недоступны. Попробуйте позже." :
+            "Не удалось загрузить подсказки. Попробуйте ещё раз.";
           throw new Error(message);
         }
         let data;
         try {
           data = await response.json();
         } catch {
-          throw new Error("The server returned invalid suggestions. Please try again.");
+          throw new Error("Сервер вернул некорректные подсказки. Попробуйте ещё раз.");
         }
         if (!isCurrentRequest()) return;
+        if (request.timedOut) throw new Error("Request timed out");
         renderSuggestions(readSuggestions(data));
       } catch (error) {
         if (!isCurrentRequest()) return;
         if (request.timedOut) {
-          showMessage("The server took too long to respond. Please try again.");
+          showMessage("Сервер отвечает слишком долго. Попробуйте ещё раз.");
         } else if (!request.controller.signal.aborted) {
           showMessage(error instanceof TypeError ?
-            "Could not connect to the server. Check your connection and try again." : error.message);
+            "Нет ответа от сервера. Проверьте соединение и попробуйте ещё раз." : error.message);
         }
       } finally {
         clearTimeout(request.timeout);
@@ -166,6 +177,7 @@
 
     // [Suggestions] Debounce: запрос уходит через 300 мс после последнего нажатия клавиши.
     input.addEventListener("input", () => {
+      if (counter) counter.textContent = `${input.value.length} / ${MAX_TEXT_LENGTH}`;
       hideSuggestions();
       if (skipNextInput) {
         skipNextInput = false;

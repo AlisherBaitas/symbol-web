@@ -10,7 +10,7 @@
   // Серверу даётся 10 секунд на вызов LLM; добавляем время на передачу HTTP-запроса и ответа.
   const REQUEST_TIMEOUT_MS = 12000;
   const BANNERS = new Set(["standard", "shadow", "thinkertoy"]);
-  const INVALID_RESPONSE = "The server returned invalid ideas. Please try again.";
+  const INVALID_RESPONSE = "Сервер вернул некорректные идеи. Попробуйте ещё раз.";
 
   function validText(text) {
     return typeof text === "string" && text.trim().length > 0 &&
@@ -19,32 +19,37 @@
   }
 
   function initializeVariations() {
-    const button = document.querySelector("#get-variations-btn");
-    const panel = document.querySelector("#variations-modal");
+    const button = document.querySelector("#ideas-button, #get-variations-btn");
+    const panel = document.querySelector("#variations-panel, #variations-modal");
     const input = document.querySelector('[name="inputWord"]');
-    const bannerSelect = document.querySelector("#banners");
+    const bannerSelect = document.querySelector("select#banners");
+    const bannerRadios = Array.from((input?.form || document)
+      .querySelectorAll('input[type="radio"][name="banners"]'));
 
-    // На других страницах, включая studio.html, элементы интерфейса обслуживает studio.js.
-    if (!button || !panel || !input || !bannerSelect) return;
+    if (!button || !panel || !input || (!bannerSelect && !bannerRadios.length)) return;
     if (button.dataset.variationsInitialized === "true") return;
     button.dataset.variationsInitialized = "true";
     button.type = "button";
     button.setAttribute("aria-controls", panel.id);
     button.setAttribute("aria-expanded", "false");
 
-    const title = document.createElement("h2");
+    const title = document.createElement("h3");
     title.id = "variations-title";
-    title.textContent = "Creative ideas";
+    title.className = "small-label";
+    title.textContent = "Идеи для текста";
 
     const closeButton = document.createElement("button");
     closeButton.type = "button";
-    closeButton.textContent = "Close ideas";
+    closeButton.className = "text-button";
+    closeButton.textContent = "Закрыть идеи";
 
     const status = document.createElement("p");
+    status.className = "hint";
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
 
-    const list = document.createElement("ul");
+    const list = document.createElement("div");
+    list.className = "variations";
     panel.replaceChildren(title, closeButton, status, list);
     panel.setAttribute("role", "region");
     panel.setAttribute("aria-labelledby", title.id);
@@ -107,48 +112,53 @@
     }
 
     function selectVariation(variation) {
-      // Исходная форма использует standard.txt; в других списках значение может быть standard.
-      const option = Array.from(bannerSelect.options).find((item) =>
+      // Поддерживаем радиокнопки студии и исходный выпадающий список.
+      const banners = bannerSelect ? Array.from(bannerSelect.options) : bannerRadios;
+      const option = banners.find((item) =>
         item.value === variation.suggested_banner ||
         item.value === `${variation.suggested_banner}.txt`);
       if (!option) {
-        showMessage("The suggested banner is unavailable in this form.");
+        showMessage("Предложенный стиль недоступен в этой форме.");
         return;
       }
 
       closeIdeas();
       input.value = variation.text;
-      bannerSelect.value = option.value;
+      if (bannerSelect) {
+        bannerSelect.value = option.value;
+      } else {
+        option.checked = true;
+      }
       // Уведомляем подсказки, счётчики символов и остальные обработчики событий формы.
       input.dispatchEvent(new Event("input", { bubbles: true }));
-      bannerSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      const bannerControl = bannerSelect || option;
+      bannerControl.dispatchEvent(new Event("input", { bubbles: true }));
+      bannerControl.dispatchEvent(new Event("change", { bubbles: true }));
       input.focus();
     }
 
     function renderVariations(variations) {
       const items = variations.map((variation) => {
-        const item = document.createElement("li");
         const choice = document.createElement("button");
         choice.type = "button";
         choice.className = "variation";
         const text = document.createElement("strong");
         text.textContent = variation.text;
         const description = document.createElement("span");
-        description.textContent = ` — ${variation.description} (${variation.suggested_banner})`;
+        description.textContent = `${variation.description} · ${variation.suggested_banner}`;
         choice.append(text, description);
         choice.addEventListener("click", () => selectVariation(variation));
-        item.append(choice);
-        return item;
+        return choice;
       });
       list.replaceChildren(...items);
-      status.textContent = "Choose an idea to use its text and banner.";
+      status.textContent = "Выберите идею, чтобы использовать её текст и стиль.";
     }
 
     async function getVariations() {
       cancelRequest();
       const text = input.value;
       if (!validText(text)) {
-        showMessage("Enter 1–1000 characters: English letters, numbers, punctuation, or line breaks.");
+        showMessage("Введите от 1 до 1000 символов: латинские буквы, цифры, знаки и переносы строк.");
         input.focus();
         return;
       }
@@ -159,7 +169,7 @@
         request.timedOut = true;
         request.controller.abort();
       }, REQUEST_TIMEOUT_MS);
-      showMessage("Creating ideas…");
+      showMessage("Придумываем идеи…");
       setLoading(true);
 
       // Сравнение объектов запросов защищает от устаревшего ответа даже после изменения A → B → A.
@@ -177,9 +187,9 @@
         if (!isCurrentRequest()) return;
         if (request.timedOut) throw new Error("Request timed out");
         if (!response.ok) {
-          const message = response.status === 400 ? "The text was rejected. Check your input and try again." :
-            response.status === 503 ? "The ideas service is unavailable. Please try again later." :
-            "Could not create ideas. Please try again.";
+          const message = response.status === 400 ? "Проверьте введённый текст и попробуйте ещё раз." :
+            response.status === 503 ? "Сервис идей недоступен. Попробуйте позже." :
+            "Не удалось создать идеи. Попробуйте ещё раз.";
           throw new Error(message);
         }
         let data;
@@ -194,10 +204,10 @@
       } catch (error) {
         if (!isCurrentRequest()) return;
         if (request.timedOut) {
-          showMessage("The server took too long to respond. Please try again.");
+          showMessage("Сервер слишком долго отвечает. Попробуйте ещё раз.");
         } else if (!request.controller.signal.aborted) {
           showMessage(error instanceof TypeError ?
-            "Could not connect to the server. Check your connection and try again." : error.message);
+            "Не удалось связаться с сервером. Проверьте соединение и попробуйте ещё раз." : error.message);
         }
       } finally {
         clearTimeout(request.timeout);
@@ -220,6 +230,7 @@
     });
     if (input.form) input.form.addEventListener("submit", closeIdeas);
     window.addEventListener("pagehide", cancelRequest);
+    setLoading(false);
   }
 
   if (document.readyState === "loading") {

@@ -131,7 +131,7 @@ internal/
     web.go                     HTTP-надстройка и связывание пакетов
     web_test.go                маршруты, ошибки, XSS, конкуренция и фаззинг
   ...                          исходные файлы остаются на местах
-templates/studio.html         главная страница и результат обычной формы
+templates/index.html          интерфейс Studio и результат генерации
 templates/studio-error.html   страница ошибки
 static/css/studio.css         адаптивное оформление
 static/js/studio.js           асинхронные действия и локальная история
