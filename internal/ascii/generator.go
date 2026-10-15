@@ -2,49 +2,34 @@ package ascii
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"os"
-	"strings"
 )
 
-var (
-	// [Validation] Ошибки вместо os.Exit и паники: обработчик превращает их в 400/404/500.
-	// ErrUnsupportedChar - в тексте есть символ, которого нет в шрифте (кириллица, Tab и т.п.)
-	ErrUnsupportedChar = errors.New("text contains a character that is not in the banner")
-	// ErrBannerNotFound - файл баннера не найден на диске
-	ErrBannerNotFound = errors.New("banner file not found")
-	// ErrBannerCorrupted - файл баннера не читается или в нём не хватает строк
-	ErrBannerCorrupted = errors.New("banner file is corrupted")
-)
+var ErrBannerNotFound = errors.New("Banner file not found")
 
-// [Validation] Generate возвращает ошибку вместо падения сервера.
-// Результат собирается в локальном strings.Builder, а не в глобальной переменной:
-// раньше одновременные запросы и упавшие запросы портили ответы друг другу.
-func Generate(input string, fileName string) (string, error) {
+var artResult string
+
+func Generate(input string, fileName string) string {
 
 	// Return map with chars and symbols
-	symStore, err := banner([]rune(input), fileName)
-	if err != nil {
-		return "", err
-	}
-
-	var art strings.Builder
+	symStore := banner([]rune(input), fileName)
 
 	// Call to save the result of symbol art
-	if err := printer(&art, symStore, input); err != nil {
-		return "", err
-	}
+	printer(symStore, input)
 
-	return art.String(), nil
+	resArt := artResult
+
+	// Clean the global var
+	artResult = ""
+
+	return resArt
 }
 
-// [Validation] printer пишет в переданный art вместо глобальной artResult
-// и возвращает ошибку от printRow, а не продолжает с неполными данными.
-func printer(art *strings.Builder, lookUp map[rune][]string, input string) error {
+func printer(lookUp map[rune][]string, input string) {
 
 	if len(input) == 0 {
-		return nil
+		return
 	}
 
 	// To convert new lines into '\n'
@@ -60,21 +45,18 @@ func printer(art *strings.Builder, lookUp map[rune][]string, input string) error
 			if len(temp) != 0 {
 				word := string(temp)
 				temp = temp[:0]
-				if err := printRow(art, lookUp, word); err != nil {
-					return err
-				}
+				printRow(lookUp, word)
 			}
 
 			// If new line at start or at the end of the string
-			// [Validation] Было artResult += "\n" (глобальная переменная).
 			if i == 0 || i == len(input)-1 {
-				art.WriteString("\n")
+				artResult += "\n"
 			}
 
 			// If between runes more than one '\n'
 			j := i
 			for j+1 < len(input) && input[j+1] == '\n' {
-				art.WriteString("\n")
+				artResult += "\n"
 				j++
 			}
 
@@ -86,23 +68,12 @@ func printer(art *strings.Builder, lookUp map[rune][]string, input string) error
 	if len(temp) != 0 {
 		word := string(temp)
 		temp = temp[:0]
-		if err := printRow(art, lookUp, word); err != nil {
-			return err
-		}
+		printRow(lookUp, word)
 	}
-	return nil
 }
 
 // Function: to print symbols
-func printRow(art *strings.Builder, lookUp map[rune][]string, input string) error {
-	// [Validation] Раньше символ без картинки в шрифте давал панику
-	// "index out of range" на currInput[lines]. Проверяем все символы заранее.
-	for i := 0; i < len(input); i++ {
-		if len(lookUp[rune(input[i])]) != 8 {
-			return fmt.Errorf("%w: %q", ErrUnsupportedChar, input[i])
-		}
-	}
-
+func printRow(lookUp map[rune][]string, input string) {
 	lines := 0
 	inputLen := len(input)
 
@@ -112,25 +83,24 @@ func printRow(art *strings.Builder, lookUp map[rune][]string, input string) erro
 		for currSymbol < inputLen {
 			currInput := lookUp[rune(input[currSymbol])]
 
-			// [Validation] Было посимвольное artResult += string(val):
-			// глобальная переменная и квадратичная склейка строк.
-			art.WriteString(currInput[lines])
+			for _, val := range currInput[lines] {
+				artResult += string(val)
+
+			}
 			currSymbol++
 		}
 
-		art.WriteString("\n")
+		artResult += "\n"
 		lines++
 	}
-	return nil
 }
 
 
-// [Validation] banner теперь возвращает ошибку вместо os.Exit и печати в консоль.
-func banner(input []rune, fileName string) (map[rune][]string, error) {
+func banner(input []rune, fileName string) map[rune][]string {
 	input = []rune(deleteLineBreaks(string(input)))
 
 	if len(input) == 0 {
-		return map[rune][]string{}, nil
+		return map[rune][]string{}
 	}
 
 	// Initialize the storage
@@ -142,10 +112,8 @@ func banner(input []rune, fileName string) (map[rune][]string, error) {
 	// [Validation] Раньше здесь был os.Exit(1): один запрос с неверным баннером
 	// завершал весь сервер. Теперь возвращаем ошибку.
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, fmt.Errorf("%w: %s", ErrBannerNotFound, fileName)
-		}
-		return nil, fmt.Errorf("%w: %v", ErrBannerCorrupted, err)
+		fmt.Printf("Error opening file: %v\n", err)
+		os.Exit(1)
 	}
 
 	defer file.Close()
@@ -215,10 +183,10 @@ func banner(input []rune, fileName string) (map[rune][]string, error) {
 
 	// [Validation] Ошибка чтения (например, папка вместо файла) больше не игнорируется.
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrBannerCorrupted, err)
+		fmt.Printf("Scanning error: %v\n", err)
 	}
 
-	return lookUp, nil
+	return lookUp
 }
 
 // Function: to sort characters
@@ -253,7 +221,9 @@ func initPositions(input []rune) []int {
 }
 
 func deleteLineBreaks(input string) string {
+
 	result := make([]rune, 0, len(input))
+
 	for _, v := range input {
 		if v != '\n' {
 			result = append(result, v)
@@ -261,11 +231,13 @@ func deleteLineBreaks(input string) string {
 			result = append(result, ' ')
 		}
 	}
+
 	return string(result)
 }
 
 // Function: to convert '\n' to new line
 func convertLineBreaks(input string) string {
+
 	temp := make([]rune, 0, len(input))
 
 	for i := 0; i < len(input); i++ {
@@ -280,3 +252,28 @@ func convertLineBreaks(input string) string {
 	return string(temp)
 }
 
+func ValidateInput(input string) error {
+
+	// Check for empty input
+	if strings.TrimSpace(input) == "" {
+		return errors.New("Text is empty")
+	}
+
+	// Check for input exceeding
+	if utf8.RuneCountInString(input) > 1000 {
+		return errors.New("Text is too long (max 1000 characters)")
+	}
+
+	// Check for printable characters
+	for _, r := range input {
+		if r == '\n' {
+			continue
+		}
+
+		if r < ' ' || r > '~' { 
+			return errors.New("Invalid character")
+		}
+	}
+
+	return nil
+}

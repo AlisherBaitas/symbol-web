@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
-	
+
 	"symbol-web/internal/handlers"
 )
 
@@ -17,7 +17,6 @@ func main() {
 	mux.HandleFunc("POST /symbol-art", handlers.HandleSymbolArt)
 
 	// AI endpoints
-	// [Suggestions] Подсказки при вводе: static/js/suggestions.js -> handlers.HandleSuggestion
 	mux.HandleFunc("POST /api/suggest", handlers.HandleSuggestion)
 	mux.HandleFunc("POST /api/recommend-banner", handlers.HandleBannerRec)
 	mux.HandleFunc("POST /api/variations", handlers.HandleVariation)
@@ -26,7 +25,7 @@ func main() {
 	fs := http.FileServer(http.Dir("static"))
 
 	// Handle static files
-	mux.Handle("GET /static/", http.StripPrefix("/static/", fs))
+	mux.Handle("GET /static/", http.StripPrefix("/static/", fs))	
 
 	log.Println("Server running on http://localhost:8080")
 
