@@ -1,31 +1,42 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<<<<<<< Updated upstream
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+
+  <title>Ошибка {{.Code}} — Symbol Studio</title>
+
   <link rel="stylesheet" href="/static/css/style.css">
-  <title>ASCII Art Generator | Error {{ .Code }}</title>
 </head>
+
 <body>
+  <header class="site-header wrap">
+    <a class="brand" href="/" aria-label="Symbol Studio — главная">
+      <span class="brand-icon" aria-hidden="true">S<span>_</span></span>
+      <span>symbol<span class="brand-light">studio</span><span class="brand-dot">.</span></span>
+    </a>
+  </header>
 
-  <!-- [Validation] Страница ошибки: код, название и понятное сообщение для пользователя -->
-  <div class="error-container">
-    <h1 class="main-text">{{ .Code }} {{ .Title }}</h1>
-    <p class="error-message">{{ .Message }}</p>
-  </div>
+  <main class="wrap">
+    <section class="error-page" aria-labelledby="error-title">
+      <p class="eyebrow">ОШИБКА {{.Code}} · {{.Title}}</p>
 
-  <a href="/" class="main-page-link">Back to main page</a>
+      <h1 id="error-title">Не получилось создать надпись</h1>
 
-=======
-  <title>Error Page</title>
-</head>
-<body>
+      <p class="error-message" role="alert">{{.Message}}</p>
 
-  <p>{{ .ErrorMessage }}</p>
+      <a class="button button-primary" href="/">Вернуться к генератору</a>
+    </section>
+  </main>
 
-  <a href="templates/index.html" class="main-page-link">Back to main page</a>
-  
->>>>>>> Stashed changes
+  <footer class="site-footer wrap">
+    <span>
+      symbolstudio.
+      <span class="footer-muted">Сделано из символов.</span>
+    </span>
+
+    <span>asamat · abaitas · ysoltamb</span>
+  </footer>
 </body>
 </html>

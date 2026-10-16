@@ -7,6 +7,8 @@ import (
 	"log"
 	"mime"
 	"net/http"
+	"strings"
+	"unicode/utf8"
 
 	"symbol-web/internal/ai"
 )
@@ -166,4 +168,26 @@ func writeVariationJSON(w http.ResponseWriter, status int, payload any) {
 	if _, err := w.Write(body); err != nil {
 		log.Printf("variations: write response: %v", err)
 	}
+}
+
+func validateArtText(input string) (bool, string) {
+    if strings.TrimSpace(input) == "" {
+        return false, "Text is empty"
+    }
+
+    if utf8.RuneCountInString(input) > 1000 {
+        return false, "Text is too long (max 1000 characters)"
+    }
+
+    for _, r := range input {
+        if r == '\n' {
+            continue
+        }
+
+        if r < ' ' || r > '~' {
+            return false, "Invalid character"
+        }
+    }
+
+    return true, ""
 }

@@ -2,18 +2,29 @@ package ascii
 
 import (
 	"bufio"
-	"fmt"
 	"os"
+	"errors"
+	"strings"
+	"unicode/utf8"
 )
 
 var ErrBannerNotFound = errors.New("Banner file not found")
 
 var artResult string
 
-func Generate(input string, fileName string) string {
+func Generate(input string, fileName string) (string, error) {
+
+	// Check for any errors
+	if validErr := validateInput(input); validErr != nil {
+		return "", validErr
+	}
 
 	// Return map with chars and symbols
-	symStore := banner([]rune(input), fileName)
+	symStore, bannerErr := banner([]rune(input), fileName)
+
+	if bannerErr != nil {
+		return "", bannerErr
+	}
 
 	// Call to save the result of symbol art
 	printer(symStore, input)
@@ -23,85 +34,17 @@ func Generate(input string, fileName string) string {
 	// Clean the global var
 	artResult = ""
 
-	return resArt
+	return resArt, nil
 }
 
-func printer(lookUp map[rune][]string, input string) {
 
-	if len(input) == 0 {
-		return
-	}
+func banner(input []rune, fileName string) (map[rune][]string, error) {
 
 	// To convert new lines into '\n'
-	input = convertLineBreaks(input)
+	input = []rune(convertLineBreaks(string(input)))
 
-	var temp []rune
-
-	for i := 0; i < len(input); i++ {
-
-		if input[i] == '\n' {
-
-			// Print symbols before new line
-			if len(temp) != 0 {
-				word := string(temp)
-				temp = temp[:0]
-				printRow(lookUp, word)
-			}
-
-			// If new line at start or at the end of the string
-			if i == 0 || i == len(input)-1 {
-				artResult += "\n"
-			}
-
-			// If between runes more than one '\n'
-			j := i
-			for j+1 < len(input) && input[j+1] == '\n' {
-				artResult += "\n"
-				j++
-			}
-
-		} else if input[i] != '\n' {
-			temp = append(temp, rune(input[i]))
-		}
-	}
-
-	if len(temp) != 0 {
-		word := string(temp)
-		temp = temp[:0]
-		printRow(lookUp, word)
-	}
-}
-
-// Function: to print symbols
-func printRow(lookUp map[rune][]string, input string) {
-	lines := 0
-	inputLen := len(input)
-
-	for lines < 8 {
-		currSymbol := 0
-
-		for currSymbol < inputLen {
-			currInput := lookUp[rune(input[currSymbol])]
-
-			for _, val := range currInput[lines] {
-				artResult += string(val)
-
-			}
-			currSymbol++
-		}
-
-		artResult += "\n"
-		lines++
-	}
-}
-
-
-func banner(input []rune, fileName string) map[rune][]string {
+	// To delete '\n' to count chars
 	input = []rune(deleteLineBreaks(string(input)))
-
-	if len(input) == 0 {
-		return map[rune][]string{}
-	}
 
 	// Initialize the storage
 	lookUp := make(map[rune][]string)
@@ -109,11 +52,8 @@ func banner(input []rune, fileName string) map[rune][]string {
 	// Open the file (read-only)
 	file, err := os.Open(fileName)
 
-	// [Validation] Раньше здесь был os.Exit(1): один запрос с неверным баннером
-	// завершал весь сервер. Теперь возвращаем ошибку.
 	if err != nil {
-		fmt.Printf("Error opening file: %v\n", err)
-		os.Exit(1)
+		return nil, ErrBannerNotFound // 404
 	}
 
 	defer file.Close()
@@ -181,13 +121,81 @@ func banner(input []rune, fileName string) map[rune][]string {
 		lineNumber++
 	}
 
-	// [Validation] Ошибка чтения (например, папка вместо файла) больше не игнорируется.
+
 	if err := scanner.Err(); err != nil {
-		fmt.Printf("Scanning error: %v\n", err)
+		return nil, errors.New("Banner file scanning error")
 	}
 
-	return lookUp
+	return lookUp, nil
 }
+
+
+func printer(lookUp map[rune][]string, input string) {
+
+	// To convert new lines into '\n'
+	input = convertLineBreaks(input)
+
+	var temp []rune
+
+	for i := 0; i < len(input); i++ {
+
+		if input[i] == '\n' {
+
+			// Print symbols before new line
+			if len(temp) != 0 {
+				word := string(temp)
+				temp = temp[:0]
+				printRow(lookUp, word)
+			}
+
+			// If new line at start or at the end of the string
+			if i == 0 || i == len(input)-1 {
+				artResult += "\n"
+			}
+
+			// If between runes more than one '\n'
+			j := i
+			for j+1 < len(input) && input[j+1] == '\n' {
+				artResult += "\n"
+				j++
+			}
+
+		} else if input[i] != '\n' {
+			temp = append(temp, rune(input[i]))
+		}
+	}
+
+	if len(temp) != 0 {
+		word := string(temp)
+		temp = temp[:0]
+		printRow(lookUp, word)
+	}
+}
+
+// Function: to print symbols
+func printRow(lookUp map[rune][]string, input string) {
+
+	lines := 0
+	inputLen := len(input)
+
+	for lines < 8 {
+		currSymbol := 0
+
+		for currSymbol < inputLen {
+			currInput := lookUp[rune(input[currSymbol])]
+
+			for _, val := range currInput[lines] {
+				artResult += string(val)
+
+			}
+			currSymbol++
+		}
+
+		artResult += "\n"
+		lines++
+	}
+}
+
 
 // Function: to sort characters
 func bubbleSort(input []rune) []rune {
@@ -220,6 +228,7 @@ func initPositions(input []rune) []int {
 	return startPos
 }
 
+// Function: to remove '\n' (new line)
 func deleteLineBreaks(input string) string {
 
 	result := make([]rune, 0, len(input))
@@ -234,6 +243,7 @@ func deleteLineBreaks(input string) string {
 
 	return string(result)
 }
+
 
 // Function: to convert '\n' to new line
 func convertLineBreaks(input string) string {
@@ -252,7 +262,8 @@ func convertLineBreaks(input string) string {
 	return string(temp)
 }
 
-func ValidateInput(input string) error {
+// Function: to check the correctness of the input
+func validateInput(input string) error {
 
 	// Check for empty input
 	if strings.TrimSpace(input) == "" {
