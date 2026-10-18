@@ -85,6 +85,8 @@ func HandleSymbolArt(w http.ResponseWriter, r *http.Request){
     	if err != nil {
         	return
     	}
+		
+		return
 	}
 
 	// Parse result.html file
