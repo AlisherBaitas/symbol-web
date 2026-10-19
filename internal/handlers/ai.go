@@ -58,7 +58,20 @@ func HandleSuggestion(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleBannerRec возвращает рекомендацию по локальным Go-правилам без вызова LLM.
-func HandleBannerRec(w http.ResponseWriter, r *http.Request) {}
+func HandleBannerRec(w http.ResponseWriter, r *http.Request) {
+
+	// Value from FORM
+	inputWord := r.FormValue("inputWord")
+
+	ai.GetRecommend(inputWord)
+
+	
+
+
+
+
+
+}
 
 // HandleVariation принимает JSON с текстом и возвращает проверенные творческие варианты.
 func HandleVariation(w http.ResponseWriter, r *http.Request) {

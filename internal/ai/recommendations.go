@@ -4,7 +4,13 @@ import (
 	"strings"
 )
 
-type stats struct {
+const (
+	specRatioLimit = 0.3
+	shortLen = 6
+	longLen = 12
+)
+
+type Stats struct {
     upper int
 	lower int
 	special int  
@@ -13,31 +19,122 @@ type stats struct {
 	nonSpace int
 }
 
-func GetRecommend(input string) string {
+type Alternative struct {
+	Banner string  `json:"banner"`
+	Score  float64 `json:"score"`
+	Reason string  `json:"reason"`
+}
+
+type Recommendation struct {
+	Recommended string `json:"recommended"`
+	Reasoning string `json:"reasoning"`
+	Alternatives []Alternative `json:"alternatives"`
+}
+
+func GetRecommend(input string) Recommendation {
 	// To analyze the input word
 	sts := analyzeInput([]rune(input))
 
-	//specRatio := 0.0
+	specRatio := 0.0
 
 	// To avoid division by zero
 	if sts.nonSpace > 0 {
-		//specRatio = float64(sts.special) / float64(sts.nonSpace)
+		specRatio = float64(sts.special) / float64(sts.nonSpace)
 	}
 
+	if sts.newLines > 0 {
+		return Recommendation{
+			Recommended: "standard",
+			Reasoning: "Multi-line text is easiest to read in the standard banner.",
+			Alternatives: []Alternative{
+				{
+					Banner: "shadow",
+					Score: 0.6,
+					Reason: "Bold, but heavy across several lines",
+				},
+				{
+					Banner: "thinkertoy",
+					Score: 0.4,
+					Reason: "Thin decorative lines are hard to read across lines",
+				},
+			},
+		}
+
+	} else if specRatio >= specRatioLimit {
+		return Recommendation{
+			Recommended: "thinkertoy",
+			Reasoning: "Symbol-heavy text suits the playful, decorative style.",
+			Alternatives: []Alternative{
+				{
+					Banner: "standard",
+					Score: 0.6,
+					Reason: "Clear and readable, less playful",
+				},
+				{
+					Banner: "shadow",
+					Score: 0.4,
+					Reason: "Shadow makes symbols harder to tell apart",
+				},
+			},
+		}
+
+	} else if (sts.lower == 0 && sts.upper > 0) || sts.length <= shortLen {
+		return Recommendation{
+			Recommended: "shadow",
+			Reasoning: "Short or uppercase text is bold and stands out.",
+			Alternatives: []Alternative{
+				{
+					Banner: "standard",
+					Score: 0.7,
+					Reason: "Good alternative, slightly less impactful",
+				},
+				{
+					Banner: "thinkertoy",
+					Score: 0.4,
+					Reason: "Too decorative for short, bold text",
+				},
+			},
+		}
+	} else if sts.length > longLen {
+		return Recommendation{
+			Recommended: "standard",
+			Reasoning: "Longer text stays readable in the standard banner.",
+			Alternatives: []Alternative{
+				{
+					Banner: "shadow",
+					Score: 0.5,
+					Reason: "Too heavy for long text",
+				},
+				{
+					Banner: "thinkertoy",
+					Score: 0.4,
+					Reason: "Decorative style is hard to read at length",
+				},
+			},
+		}
+	}
+
+	return Recommendation{
+			Recommended: "thinkertoy",
+			Reasoning: "Playful for short mixed-case text.",
+			Alternatives: []Alternative{
+				{
+					Banner: "standard",
+					Score: 0.7,
+					Reason: "Safe and readable choice",
+				},
+				{
+					Banner: "shadow",
+					Score: 0.5,
+					Reason: "Bold, but less fitting for mixed case",
+				},
+			},
+	}
 	
-
-
-
-
-
-
-	
-
-	return ""
 }
 
 
-func analyzeInput(input []rune) stats {
+func analyzeInput(input []rune) Stats {
 	// To convert new lines into '\n'
 	inputString := strings.TrimSpace(convertLineBreaks(string(input)))
 
@@ -63,7 +160,7 @@ func analyzeInput(input []rune) stats {
 		}
 	}
 
-	return stats {
+	return Stats {
 		upper: upCount,
 		lower: lowCount,
 		special: specCount,
