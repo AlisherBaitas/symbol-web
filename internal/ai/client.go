@@ -1,32 +1,32 @@
 package ai
 
 import (
-	"net/http"
-	"os"
-	"time"
-	"fmt"
-	"strings"
-	"unicode/utf8"
-	"encoding/json"
-	"context"
-	"io"
 	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
 	"net/url"
+	"os"
+	"strings"
+	"time"
+	"unicode/utf8"
 )
 
 type AIClient struct {
 	baseURL string
-	model string
-	client *http.Client
+	model   string
+	client  *http.Client
 }
 
 // Create new AI Client
 func NewAIClient() *AIClient {
-    return &AIClient{
-        baseURL: os.Getenv("LLM_BASE_URL"),
-        model:   os.Getenv("LLM_MODEL"),
-        client:  &http.Client{Timeout: 10 * time.Second},
-    }
+	return &AIClient{
+		baseURL: os.Getenv("LLM_BASE_URL"),
+		model:   os.Getenv("LLM_MODEL"),
+		client:  &http.Client{Timeout: 10 * time.Second},
+	}
 }
 
 // GetSuggestions returns 3-5 text completions for the given input
@@ -104,7 +104,6 @@ func (c *AIClient) chatSuggest(ctx context.Context, prompt string) (string, erro
 	}
 	return parsed.Choices[0].Message.Content, nil
 }
-
 
 // GetVariations возвращает 3–5 проверенных идей для переданного текста.
 // Обработчик должен вернуть их в формате {"variations": ideas}: ошибка ввода

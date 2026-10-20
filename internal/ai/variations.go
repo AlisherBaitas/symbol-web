@@ -71,7 +71,6 @@ func mockVariations(text string) []Variation {
 	}
 }
 
-
 func parseVariations(answer string) ([]Variation, error) {
 	answer = strings.TrimSpace(answer)
 	// Некоторые модели оборачивают JSON в блок кода Markdown. Принимаем только
@@ -103,7 +102,6 @@ func parseVariations(answer string) ([]Variation, error) {
 	return variations, nil
 }
 
-
 func validVariationText(text string) bool {
 	if len(text) == 0 || len(text) > maxVariationTextChars {
 		return false
@@ -115,7 +113,6 @@ func validVariationText(text string) bool {
 	}
 	return true
 }
-
 
 func validVariationDescription(description string) bool {
 	length := utf8.RuneCountInString(description)
@@ -129,7 +126,6 @@ func validVariationDescription(description string) bool {
 	}
 	return true
 }
-
 
 func validVariationBanner(banner string) bool {
 	return banner == "standard" || banner == "shadow" || banner == "thinkertoy"

@@ -1,10 +1,10 @@
 package ai
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 	"unicode/utf8"
-	"errors"
 )
 
 const (
@@ -46,7 +46,6 @@ type chatResponse struct {
 	} `json:"choices"`
 }
 
-
 // mockSuggestions builds canned suggestions that depend only on the input
 func mockSuggestions(text string) []string {
 	// [Validation] Переносы и повторные пробелы -> один пробел; длинный текст
@@ -64,7 +63,6 @@ func mockSuggestions(text string) []string {
 	}
 }
 
-
 // chatURL turns LLM_BASE_URL into the chat completions URL
 func chatURL(baseURL string) string {
 	base := strings.TrimRight(baseURL, "/")
@@ -73,7 +71,6 @@ func chatURL(baseURL string) string {
 	}
 	return base + "/v1/chat/completions"
 }
-
 
 // parseSuggestions cleans the LLM answer: one suggestion per line,
 // no numbering/bullets/quotes, no duplicates, under 50 chars, at most 5
@@ -107,7 +104,6 @@ func parseSuggestions(answer string) []string {
 	}
 	return result
 }
-
 
 // [Validation] printableASCII сообщает, состоит ли строка только из символов 32-126,
 // которые есть в файлах баннеров.
