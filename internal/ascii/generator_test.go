@@ -2,8 +2,11 @@ package ascii
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -107,11 +110,11 @@ func TestGenerate(t *testing.T) {
 	}
 }
 
+// [Fix] Глобальный буфер artResult удалён; проверяем, что вызовы независимы.
 func TestGenerate_NoLeftoversBetweenCalls(t *testing.T) {
-	// Generate uses a global buffer, a second call must not contain the first result
 	first, _ := Generate("Hi", standardFile)
 	second, _ := Generate("Hi", standardFile)
-	if first != second || artResult != "" {
+	if first != second || first != artHi {
 		t.Errorf("Generate() keeps old result between calls")
 	}
 }
@@ -184,11 +187,9 @@ func Test_printer(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			artResult = ""
-			t.Cleanup(func() { artResult = "" })
-			printer(tt.args.lookUp, tt.args.input)
-			if artResult != tt.want {
-				t.Errorf("printer() =\n%q\nwant\n%q", artResult, tt.want)
+			// [Fix] printer возвращает строку вместо записи в глобальную переменную.
+			if got := printer(tt.args.lookUp, tt.args.input); got != tt.want {
+				t.Errorf("printer() =\n%q\nwant\n%q", got, tt.want)
 			}
 		})
 	}
@@ -210,14 +211,16 @@ func Test_printRow(t *testing.T) {
 	}{
 		{name: "Hi", args: args{lookUp: lookUp, input: "Hi"}, want: artHi},
 		{name: "empty word gives 8 empty lines", args: args{lookUp: lookUp, input: ""}, want: strings.Repeat("\n", 8)},
+		// [Fix] Нет символа в таблице -> пустые строки, а не паника.
+		{name: "missing glyph does not panic", args: args{lookUp: map[rune][]string{}, input: "Z"}, want: strings.Repeat("\n", 8)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			artResult = ""
-			t.Cleanup(func() { artResult = "" })
-			printRow(tt.args.lookUp, tt.args.input)
-			if artResult != tt.want {
-				t.Errorf("printRow() =\n%q\nwant\n%q", artResult, tt.want)
+			// [Fix] printRow пишет в переданный strings.Builder.
+			var got strings.Builder
+			printRow(&got, tt.args.lookUp, tt.args.input)
+			if got.String() != tt.want {
+				t.Errorf("printRow() =\n%q\nwant\n%q", got.String(), tt.want)
 			}
 		})
 	}
@@ -351,5 +354,169 @@ func Test_validateInput(t *testing.T) {
 				t.Errorf("validateInput() error = %q, want %q", got, tt.wantErr)
 			}
 		})
+	}
+}
+
+// [Fix] Новые тесты: эталонные примеры из аудита, CRLF, белый список баннеров,
+// испорченный файл баннера и параллельные вызовы (раньше была гонка данных).
+
+// Эталон из аудита: "{123}" и "<Hello> (World)!" в две строки, баннер standard
+var auditStandardExample = []string{
+	"   __                     __",
+	"  / /  _   ____    _____  \\ \\",
+	" | |  / | |___ \\  |___ /   | |",
+	"/ /   | |   __) |   |_ \\    \\ \\",
+	"\\ \\   | |  / __/   ___) |   / /",
+	" | |  |_| |_____| |____/   | |",
+	"  \\_\\                     /_/",
+	"",
+	"   __  _    _          _   _          __            __ __          __                 _       _  __    _",
+	"  / / | |  | |        | | | |         \\ \\          / / \\ \\        / /                | |     | | \\ \\  | |",
+	" / /  | |__| |   ___  | | | |   ___    \\ \\        | |   \\ \\  /\\  / /    ___    _ __  | |   __| |  | | | |",
+	"< <   |  __  |  / _ \\ | | | |  / _ \\    > >       | |    \\ \\/  \\/ /    / _ \\  | '__| | |  / _` |  | | | |",
+	" \\ \\  | |  | | |  __/ | | | | | (_) |  / /        | |     \\  /\\  /    | (_) | | |    | | | (_| |  | | |_|",
+	"  \\_\\ |_|  |_|  \\___| |_| |_|  \\___/  /_/         | |      \\/  \\/      \\___/  |_|    |_|  \\__,_|  | | (_)",
+	"                                                   \\_\\                                           /_/",
+}
+
+// Эталон из аудита: "123 T/fs#R", баннер thinkertoy
+var auditThinkertoyExample = []string{
+	"  0    --  o-o        o-O-o     o  o-o      | |  o--o",
+	" /|   o  o    |         |      /   |       -O-O- |   |",
+	"o |     /   oo          |     o   -O-  o-o  | |  O-Oo",
+	"  |    /      |         |    /     |    \\  -O-O- |  \\",
+	"o-o-o o--o o-o          o   o      o   o-o  | |  o   o",
+}
+
+// normalizeArt убирает пробелы в конце строк и пустые строки по краям:
+// в тексте задания хвостовые пробелы не видны.
+func normalizeArt(art string) string {
+	lines := strings.Split(art, "\n")
+	for i := range lines {
+		lines[i] = strings.TrimRight(lines[i], " ")
+	}
+	return strings.Trim(strings.Join(lines, "\n"), "\n")
+}
+
+func TestGenerate_AuditExamples(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		fileName string
+		want     []string
+	}{
+		{name: "standard, typed \\n", input: "{123}\\n<Hello> (World)!", fileName: standardFile, want: auditStandardExample},
+		{name: "standard, real line break", input: "{123}\n<Hello> (World)!", fileName: standardFile, want: auditStandardExample},
+		{name: "standard, browser CRLF", input: "{123}\r\n<Hello> (World)!", fileName: standardFile, want: auditStandardExample},
+		{name: "thinkertoy", input: "123 T/fs#R", fileName: thinkertoyFile, want: auditThinkertoyExample},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := Generate(tt.input, tt.fileName)
+			if err != nil {
+				t.Fatalf("Generate() error = %v", err)
+			}
+			want := strings.Join(tt.want, "\n")
+			if normalizeArt(got) != want {
+				t.Errorf("Generate() =\n%s\nwant\n%s", normalizeArt(got), want)
+			}
+		})
+	}
+}
+
+func TestNormalizeLineBreaks(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{name: "CRLF", input: "a\r\nb", want: "a\nb"},
+		{name: "several CRLF", input: "\r\na\r\n\r\n", want: "\na\n\n"},
+		{name: "LF is kept", input: "a\nb", want: "a\nb"},
+		{name: "lonely CR is kept (validation rejects it)", input: "a\rb", want: "a\rb"},
+		{name: "empty", input: "", want: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NormalizeLineBreaks(tt.input); got != tt.want {
+				t.Errorf("NormalizeLineBreaks() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGenerate_LonelyCarriageReturnIsInvalid(t *testing.T) {
+	if _, err := Generate("a\rb", standardFile); err == nil {
+		t.Errorf("Generate() with a lonely \\r: want an error")
+	}
+}
+
+func TestBannerFile(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    string
+		wantErr bool
+	}{
+		{name: "standard.txt", input: "standard.txt", want: "standard.txt"},
+		{name: "shadow without .txt", input: "shadow", want: "shadow.txt"},
+		{name: "thinkertoy", input: "thinkertoy.txt", want: "thinkertoy.txt"},
+		{name: "unknown banner", input: "comic.txt", wantErr: true},
+		{name: "empty", input: "", wantErr: true},
+		{name: "other project file", input: "go.mod", wantErr: true},
+		{name: "path traversal", input: "../standard.txt", wantErr: true},
+		{name: "absolute path", input: "/etc/passwd", wantErr: true},
+		{name: "wrong case", input: "Standard", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := BannerFile(tt.input)
+			if tt.wantErr {
+				if !errors.Is(err, ErrInvalidBanner) {
+					t.Errorf("BannerFile(%q) error = %v, want ErrInvalidBanner", tt.input, err)
+				}
+				return
+			}
+			if err != nil || got != tt.want {
+				t.Errorf("BannerFile(%q) = %q, %v; want %q", tt.input, got, err, tt.want)
+			}
+		})
+	}
+}
+
+func TestGenerate_CorruptedBanner(t *testing.T) {
+	// Файл существует, но в нём есть только несколько строк — раньше это давало панику.
+	path := filepath.Join(t.TempDir(), "broken.txt")
+	if err := os.WriteFile(path, []byte("\nonly\nthree\nlines\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := Generate("Hi", path)
+	if !errors.Is(err, ErrBannerCorrupted) {
+		t.Errorf("Generate() with a short banner error = %v, want ErrBannerCorrupted", err)
+	}
+}
+
+func TestGenerate_Concurrent(t *testing.T) {
+	// Раньше все вызовы писали в общую переменную artResult: результаты
+	// перемешивались. Запускайте с -race, чтобы детектор проверил это место.
+	want := map[string]string{"Hi": artHi, "A": artStandardA}
+	var wg sync.WaitGroup
+	errs := make(chan string, 200)
+	for i := 0; i < 100; i++ {
+		for input, expected := range want {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				got, err := Generate(input, standardFile)
+				if err != nil || got != expected {
+					errs <- input
+				}
+			}()
+		}
+	}
+	wg.Wait()
+	close(errs)
+	if n := len(errs); n > 0 {
+		t.Errorf("Generate() returned a wrong result in %d of 200 concurrent calls", n)
 	}
 }

@@ -2,17 +2,50 @@ package ascii
 
 import (
 	"bufio"
-	"os"
 	"errors"
+	"os"
 	"strings"
 	"unicode/utf8"
 )
 
 var ErrBannerNotFound = errors.New("Banner file not found")
 
-var artResult string
+// [Fix] Ошибка выбора баннера: имя не из списка -> 400 (раньше любое значение
+// из формы открывалось как путь к файлу и давало 404 или даже чтение go.mod).
+var ErrInvalidBanner = errors.New("Invalid banner: choose standard, shadow or thinkertoy")
+
+// [Fix] Файл баннера найден, но в нём нет нужного символа (обрезанный/чужой файл).
+// Раньше printRow падал с паникой "index out of range".
+var ErrBannerCorrupted = errors.New("Banner file is corrupted")
+
+// [Fix] Белый список баннеров. Принимаем имя с .txt и без него.
+var bannerFiles = map[string]string{
+	"standard":       "standard.txt",
+	"standard.txt":   "standard.txt",
+	"shadow":         "shadow.txt",
+	"shadow.txt":     "shadow.txt",
+	"thinkertoy":     "thinkertoy.txt",
+	"thinkertoy.txt": "thinkertoy.txt",
+}
+
+// [Fix] BannerFile переводит выбор пользователя в имя файла из белого списка.
+func BannerFile(name string) (string, error) {
+	file, ok := bannerFiles[name]
+	if !ok {
+		return "", ErrInvalidBanner
+	}
+	return file, nil
+}
+
+// [Fix] Удалена глобальная переменная artResult: все запросы писали в неё
+// одновременно (DATA RACE, 8 из 80 ответов приходили с чужим артом).
+// Теперь результат собирается в локальном strings.Builder каждого вызова.
 
 func Generate(input string, fileName string) (string, error) {
+
+	// [Fix] Браузер отправляет перенос строки из <textarea> как "\r\n".
+	// Приводим к "\n", иначе '\r' считался недопустимым символом (400).
+	input = NormalizeLineBreaks(input)
 
 	// Check for any errors
 	if validErr := ValidateInput(input); validErr != nil {
@@ -26,17 +59,21 @@ func Generate(input string, fileName string) (string, error) {
 		return "", bannerErr
 	}
 
+	// [Fix] Проверяем, что для каждого символа прочитаны все 8 строк.
+	for _, r := range deleteLineBreaks(convertLineBreaks(input)) {
+		if len(symStore[r]) != 8 {
+			return "", ErrBannerCorrupted
+		}
+	}
+
 	// Call to save the result of symbol art
-	printer(symStore, input)
-
-	resArt := artResult
-
-	// Clean the global var
-	artResult = ""
-
-	return resArt, nil
+	return printer(symStore, input), nil
 }
 
+// [Fix] NormalizeLineBreaks заменяет переносы Windows/браузера "\r\n" на "\n".
+func NormalizeLineBreaks(input string) string {
+	return strings.ReplaceAll(input, "\r\n", "\n")
+}
 
 func banner(input []rune, fileName string) (map[rune][]string, error) {
 
@@ -57,6 +94,11 @@ func banner(input []rune, fileName string) (map[rune][]string, error) {
 	}
 
 	defer file.Close()
+
+	// [Fix] Пустой ввод: раньше input[0] ниже вызывал панику.
+	if len(input) == 0 {
+		return lookUp, nil
+	}
 
 	// Read data line by line
 	scanner := bufio.NewScanner(file)
@@ -121,7 +163,6 @@ func banner(input []rune, fileName string) (map[rune][]string, error) {
 		lineNumber++
 	}
 
-
 	if err := scanner.Err(); err != nil {
 		return nil, errors.New("Banner file scanning error")
 	}
@@ -129,12 +170,13 @@ func banner(input []rune, fileName string) (map[rune][]string, error) {
 	return lookUp, nil
 }
 
-
-func printer(lookUp map[rune][]string, input string) {
+// [Fix] printer возвращает результат вместо записи в глобальную переменную.
+func printer(lookUp map[rune][]string, input string) string {
 
 	// To convert new lines into '\n'
 	input = convertLineBreaks(input)
 
+	var result strings.Builder
 	var temp []rune
 
 	for i := 0; i < len(input); i++ {
@@ -145,18 +187,18 @@ func printer(lookUp map[rune][]string, input string) {
 			if len(temp) != 0 {
 				word := string(temp)
 				temp = temp[:0]
-				printRow(lookUp, word)
+				printRow(&result, lookUp, word)
 			}
 
 			// If new line at start or at the end of the string
 			if i == 0 || i == len(input)-1 {
-				artResult += "\n"
+				result.WriteString("\n")
 			}
 
 			// If between runes more than one '\n'
 			j := i
 			for j+1 < len(input) && input[j+1] == '\n' {
-				artResult += "\n"
+				result.WriteString("\n")
 				j++
 			}
 
@@ -168,12 +210,15 @@ func printer(lookUp map[rune][]string, input string) {
 	if len(temp) != 0 {
 		word := string(temp)
 		temp = temp[:0]
-		printRow(lookUp, word)
+		printRow(&result, lookUp, word)
 	}
+
+	return result.String()
 }
 
 // Function: to print symbols
-func printRow(lookUp map[rune][]string, input string) {
+// [Fix] Пишет в переданный strings.Builder, а не в глобальную переменную.
+func printRow(result *strings.Builder, lookUp map[rune][]string, input string) {
 
 	lines := 0
 	inputLen := len(input)
@@ -184,18 +229,17 @@ func printRow(lookUp map[rune][]string, input string) {
 		for currSymbol < inputLen {
 			currInput := lookUp[rune(input[currSymbol])]
 
-			for _, val := range currInput[lines] {
-				artResult += string(val)
-
+			// [Fix] Нет строки символа -> пропускаем, а не паникуем.
+			if lines < len(currInput) {
+				result.WriteString(currInput[lines])
 			}
 			currSymbol++
 		}
 
-		artResult += "\n"
+		result.WriteString("\n")
 		lines++
 	}
 }
-
 
 // Function: to sort characters
 func bubbleSort(input []rune) []rune {
@@ -244,7 +288,6 @@ func deleteLineBreaks(input string) string {
 	return string(result)
 }
 
-
 // Function: to convert '\n' to new line
 func convertLineBreaks(input string) string {
 
@@ -281,7 +324,7 @@ func ValidateInput(input string) error {
 			continue
 		}
 
-		if r < ' ' || r > '~' { 
+		if r < ' ' || r > '~' {
 			return errors.New("Invalid character")
 		}
 	}
