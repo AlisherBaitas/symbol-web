@@ -63,14 +63,27 @@ func HandleBannerRec(w http.ResponseWriter, r *http.Request) {
 	// Value from FORM
 	inputWord := r.FormValue("inputWord")
 
-	ai.GetRecommend(inputWord)
+	// Recomendation result
+	res, errRec := ai.GetRecommend(inputWord)
 
-	
+	if errRec != nil  {
+        http.Error(w, errRec.Error(), http.StatusBadRequest) // 400
+        return
+	}
 
+	// Return the JSON encoding 
+	jsonRes, err := json.Marshal(res)
 
+	if err != nil {
+		http.Error(w, "Failed to encode to JSON", http.StatusInternalServerError) // 500
+		return
+	}
 
-
-
+	// To tell that response contains JSON data
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK) // 200
+	// To send JSON result
+	w.Write(jsonRes)
 }
 
 // HandleVariation принимает JSON с текстом и возвращает проверенные творческие варианты.

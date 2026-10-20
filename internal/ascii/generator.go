@@ -15,7 +15,7 @@ var artResult string
 func Generate(input string, fileName string) (string, error) {
 
 	// Check for any errors
-	if validErr := validateInput(input); validErr != nil {
+	if validErr := ValidateInput(input); validErr != nil {
 		return "", validErr
 	}
 
@@ -263,7 +263,7 @@ func convertLineBreaks(input string) string {
 }
 
 // Function: to check the correctness of the input
-func validateInput(input string) error {
+func ValidateInput(input string) error {
 
 	// Check for empty input
 	if strings.TrimSpace(input) == "" {

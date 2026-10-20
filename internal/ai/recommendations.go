@@ -2,6 +2,7 @@ package ai
 
 import (
 	"strings"
+	"symbol-web/internal/ascii"
 )
 
 const (
@@ -31,7 +32,12 @@ type Recommendation struct {
 	Alternatives []Alternative `json:"alternatives"`
 }
 
-func GetRecommend(input string) Recommendation {
+func GetRecommend(input string) (Recommendation, error) {
+
+	if err := ascii.ValidateInput(input); err != nil {
+		return Recommendation{}, err
+	}
+
 	// To analyze the input word
 	sts := analyzeInput([]rune(input))
 
@@ -58,7 +64,7 @@ func GetRecommend(input string) Recommendation {
 					Reason: "Thin decorative lines are hard to read across lines",
 				},
 			},
-		}
+		}, nil
 
 	} else if specRatio >= specRatioLimit {
 		return Recommendation{
@@ -76,7 +82,7 @@ func GetRecommend(input string) Recommendation {
 					Reason: "Shadow makes symbols harder to tell apart",
 				},
 			},
-		}
+		}, nil
 
 	} else if (sts.lower == 0 && sts.upper > 0) || sts.length <= shortLen {
 		return Recommendation{
@@ -94,7 +100,8 @@ func GetRecommend(input string) Recommendation {
 					Reason: "Too decorative for short, bold text",
 				},
 			},
-		}
+		}, nil
+
 	} else if sts.length > longLen {
 		return Recommendation{
 			Recommended: "standard",
@@ -111,7 +118,7 @@ func GetRecommend(input string) Recommendation {
 					Reason: "Decorative style is hard to read at length",
 				},
 			},
-		}
+		}, nil 
 	}
 
 	return Recommendation{
@@ -129,7 +136,7 @@ func GetRecommend(input string) Recommendation {
 					Reason: "Bold, but less fitting for mixed case",
 				},
 			},
-	}
+	}, nil
 	
 }
 

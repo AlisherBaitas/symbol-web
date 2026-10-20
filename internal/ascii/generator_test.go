@@ -342,7 +342,7 @@ func Test_validateInput(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateInput(tt.args.input)
+			err := ValidateInput(tt.args.input)
 			got := ""
 			if err != nil {
 				got = err.Error()
