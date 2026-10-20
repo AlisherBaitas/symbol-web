@@ -91,8 +91,14 @@ func TestHandleSymbolArt(t *testing.T) {
 		{name: "empty text", request: formRequest("", "standard.txt"), wantStatus: http.StatusBadRequest},
 		{name: "cyrillic text", request: formRequest("Привет", "standard.txt"), wantStatus: http.StatusBadRequest},
 		{name: "text too long", request: formRequest(strings.Repeat("a", 1001), "standard.txt"), wantStatus: http.StatusBadRequest},
-		{name: "unknown banner", request: formRequest("Hi", "comic.txt"), wantStatus: http.StatusNotFound},
-		{name: "no banner", request: formRequest("Hi", ""), wantStatus: http.StatusNotFound},
+		// [Fix] По ТЗ неверный выбор баннера -> 400 (раньше тест закреплял 404).
+		{name: "unknown banner", request: formRequest("Hi", "comic.txt"), wantStatus: http.StatusBadRequest},
+		{name: "no banner", request: formRequest("Hi", ""), wantStatus: http.StatusBadRequest},
+		{name: "project file as banner", request: formRequest("hi", "go.mod"), wantStatus: http.StatusBadRequest},
+		{name: "path traversal banner", request: formRequest("hi", "../standard.txt"), wantStatus: http.StatusBadRequest},
+		{name: "banner without .txt", request: formRequest("A", "shadow"), wantStatus: http.StatusOK, wantContains: []string{"_|_|_|_| "}},
+		// [Fix] Браузер отправляет перенос строки из textarea как "\r\n".
+		{name: "browser CRLF line break", request: formRequest("A\r\nA", "shadow.txt"), wantStatus: http.StatusOK, wantContains: []string{"_|_|_|_| "}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

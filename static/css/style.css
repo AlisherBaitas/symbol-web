@@ -431,6 +431,21 @@ textarea[aria-invalid=true] {
   box-shadow: 0 0 0 1px var(--purple);
 }
 
+/* [Fix] Подсветка баннера, который рекомендовал /api/recommend-banner */
+.banner-card.is-recommended {
+  border-color: var(--purple);
+  border-style: dashed;
+}
+
+.banner-card.is-recommended::after {
+  content: "★ AI";
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 9px;
+  color: var(--purple);
+}
+
 .banner-card:has(input:focus-visible) {
   outline: 3px solid var(--purple);
   outline-offset: 4px;

@@ -12,6 +12,8 @@
   <script src="/static/js/suggestions.js" defer></script>
   <script src="/static/js/recommendations.js" defer></script>
   <script src="/static/js/variations.js" defer></script>
+  <!-- [Fix] Кнопки «Копировать», «Попробовать с Hello, world!» и история были без JS -->
+  <script src="/static/js/history.js" defer></script>
 </head>
 
 <body>
@@ -114,12 +116,13 @@
           </fieldset>
 
           <div class="assistant-actions">
-            <button id="recommend-button" class="button button-quiet" type="button">
+            <!-- [Fix] id кнопок и панели идей как в ТЗ: ai-recommend-btn, get-variations-btn, variations-modal -->
+            <button id="ai-recommend-btn" class="button button-quiet btn-ai" type="button">
               <span aria-hidden="true">＋</span>
               Подобрать стиль
             </button>
 
-            <button id="ideas-button" class="button button-quiet" type="button" disabled>
+            <button id="get-variations-btn" class="button button-quiet btn-secondary" type="button" disabled>
               <span aria-hidden="true">＋</span>
               Идеи для текста
             </button>
@@ -129,7 +132,7 @@
 
           <div id="recommendation-result" class="recommendation" role="status" hidden></div>
 
-          <div id="variations-panel" class="variations" aria-label="Творческие варианты" hidden></div>
+          <div id="variations-modal" class="variations" aria-label="Творческие варианты" hidden></div>
 
           <button id="generate-button" class="button button-primary" type="submit">
             Создать ASCII-арт <span aria-hidden="true">↗</span>
@@ -149,45 +152,8 @@
           <span class="preview-label">PREVIEW</span>
         </div>
 
-        <div class="canvas-toolbar">
-          <span>
-            <span class="status-dot" aria-hidden="true"></span>
-            <span id="output-label">{{if .Art}}Надпись готова{{else}}Готов к творчеству{{end}}</span>
-          </span>
-        </div>
-
-        <div id="output-canvas" class="output-canvas" aria-busy="false">
-          <div id="empty-state" class="empty-state" {{if .Art}}hidden{{end}}>
-            <div class="empty-symbol" aria-hidden="true">[ Aa ]</div>
-
-            <h3>Здесь появится ваша идея</h3>
-
-            <p>
-              Напишите пару слов, выберите стиль<br>
-              и нажмите «Создать ASCII-арт».
-            </p>
-
-            <button class="example-link" id="example-button" type="button" disabled>
-              Попробовать с «Hello, world!»
-              <span aria-hidden="true">→</span>
-            </button>
-          </div>
-
-          <!-- Result from the server; keep {{.Art}} right after the tag so no extra whitespace enters the <pre> -->
-          <pre id="art-output" tabindex="0" aria-label="ASCII-арт; прокрутите горизонтально для длинной надписи" {{if not .Art}}hidden{{end}}>{{.Art}}</pre>
-        </div>
-
-        <div class="output-footer">
-          <p id="output-status" role="status" aria-live="polite">
-            {{if .Art}}Готово: скопируйте надпись.{{else}}Ваш следующий маленький шедевр.{{end}}
-          </p>
-
-          <div class="output-actions">
-            <button id="copy-button" type="button" class="button button-secondary" {{if not .Art}}disabled{{end}}>
-              Копировать
-            </button>
-          </div>
-        </div>
+        <!-- [Fix] Результат генерации: templates/result.html -->
+        {{template "result" .}}
 
         <div class="history-area">
           <div class="history-heading">
