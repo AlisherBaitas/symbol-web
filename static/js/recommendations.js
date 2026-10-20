@@ -17,14 +17,20 @@
       radio.checked = true;
       radio.dispatchEvent(new Event('change', { bubbles: true }));
     }
-    return Boolean(radio);
   }
 
-  // Build the result with textContent (no innerHTML), so server text can't inject markup.
-  function el(tag, text) {
+  // Build elements with textContent (no innerHTML), so server text can't inject markup.
+  function el(tag, text, className) {
     const node = document.createElement(tag);
     if (text !== undefined) node.textContent = text;
+    if (className) node.className = className;
     return node;
+  }
+
+  function closeRecommendation() {
+    recommendationResult.hidden = true;
+    recommendationResult.replaceChildren();
+    assistantStatus.textContent = '';
   }
 
   function renderResult(data) {
@@ -41,13 +47,31 @@
       list.append(item);
     });
 
+    // Buttons: the user decides whether to apply the style or just close the box
+    const applyButton = el('button', 'Use this style', 'text-button');
+    applyButton.type = 'button';
+    applyButton.addEventListener('click', () => {
+      selectBanner(data.recommended);
+      closeRecommendation();
+    });
+
+    const closeButton = el('button', 'Close', 'text-button');
+    closeButton.type = 'button';
+    closeButton.addEventListener('click', closeRecommendation);
+
+    const actions = el('div');
+    actions.style.display = 'flex';
+    actions.style.gap = '16px';
+    actions.append(applyButton, closeButton);
+
     recommendationResult.replaceChildren(
       el('h3', 'Recommended Banner'),
       el('p', data.recommended),
       el('h3', 'Reasoning'),
       el('p', data.reasoning),
       el('h3', 'Alternatives'),
-      list
+      list,
+      actions
     );
     recommendationResult.hidden = false;
   }
@@ -77,14 +101,8 @@
         return;
       }
 
-      const data = await response.json();
-
-      renderResult(data);
-
-      // Apply the recommendation to the style picker
-      if (selectBanner(data.recommended)) {
-        assistantStatus.textContent = `Style "${data.recommended}" selected.`;
-      }
+      renderResult(await response.json());
+      // NOTE: the selected banner is NOT changed here anymore.
     } catch (err) {
       console.error(err);
       assistantStatus.textContent = 'Network error. Please try again.';
