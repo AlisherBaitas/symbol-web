@@ -89,10 +89,9 @@ func TestHandleSuggestion(t *testing.T) {
 }
 
 func TestHandleBannerRec(t *testing.T) {
-	// TODO: убрать Skip, когда HandleBannerRec будет дописан (сейчас тело пустое).
-	// Кейсы ниже написаны по заданию: запрос {"text": "..."}, ответ JSON
+	// [Fix] Убран t.Skip: обработчик теперь принимает JSON из ТЗ, тест выполняется.
+	// Кейсы по заданию: запрос {"text": "..."}, ответ JSON
 	// {"recommended": "...", "reasoning": "...", "alternatives": [...]}.
-	t.Skip("HandleBannerRec is not implemented yet")
 
 	tests := []struct {
 		name            string
@@ -104,6 +103,12 @@ func TestHandleBannerRec(t *testing.T) {
 		{name: "long text", request: jsonRequest(http.MethodPost, "/api/recommend-banner", textBody("Hello there friend")), wantStatus: http.StatusOK, wantRecommended: "standard"},
 		{name: "medium mixed case", request: jsonRequest(http.MethodPost, "/api/recommend-banner", textBody("Hello World")), wantStatus: http.StatusOK, wantRecommended: "thinkertoy"},
 		{name: "empty text", request: jsonRequest(http.MethodPost, "/api/recommend-banner", textBody("")), wantStatus: http.StatusBadRequest},
+		// [Fix] Дополнительные позитивные и негативные кейсы.
+		{name: "symbol heavy", request: jsonRequest(http.MethodPost, "/api/recommend-banner", textBody("@#$%!abc")), wantStatus: http.StatusOK, wantRecommended: "thinkertoy"},
+		{name: "browser CRLF", request: jsonRequest(http.MethodPost, "/api/recommend-banner", textBody("Hello\r\nWorld")), wantStatus: http.StatusOK, wantRecommended: "standard"},
+		{name: "cyrillic text", request: jsonRequest(http.MethodPost, "/api/recommend-banner", textBody("Привет")), wantStatus: http.StatusBadRequest},
+		{name: "invalid JSON", request: jsonRequest(http.MethodPost, "/api/recommend-banner", "{bad"), wantStatus: http.StatusBadRequest},
+		{name: "form instead of JSON", request: formRequest("WELCOME", ""), wantStatus: http.StatusUnsupportedMediaType},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -114,6 +119,8 @@ func TestHandleBannerRec(t *testing.T) {
 				t.Fatalf("HandleBannerRec() status = %d, want %d", rec.Code, tt.wantStatus)
 			}
 			if tt.wantStatus != http.StatusOK {
+				// [Fix] Ошибки тоже в JSON (раньше — простой текст).
+				checkJSONError(t, rec)
 				return
 			}
 			var got struct {

@@ -7,16 +7,16 @@ import (
 
 const (
 	specRatioLimit = 0.3
-	shortLen = 6
-	longLen = 12
+	shortLen       = 6
+	longLen        = 12
 )
 
 type Stats struct {
-    upper int
-	lower int
-	special int  
+	upper    int
+	lower    int
+	special  int
 	newLines int
-	length int 
+	length   int
 	nonSpace int
 }
 
@@ -27,12 +27,15 @@ type Alternative struct {
 }
 
 type Recommendation struct {
-	Recommended string `json:"recommended"`
-	Reasoning string `json:"reasoning"`
+	Recommended  string        `json:"recommended"`
+	Reasoning    string        `json:"reasoning"`
 	Alternatives []Alternative `json:"alternatives"`
 }
 
 func GetRecommend(input string) (Recommendation, error) {
+
+	// [Fix] "\r\n" из textarea считаем обычным переносом строки, как в генераторе.
+	input = ascii.NormalizeLineBreaks(input)
 
 	if err := ascii.ValidateInput(input); err != nil {
 		return Recommendation{}, err
@@ -51,16 +54,16 @@ func GetRecommend(input string) (Recommendation, error) {
 	if sts.newLines > 0 {
 		return Recommendation{
 			Recommended: "standard",
-			Reasoning: "Multi-line text is easiest to read in the standard banner.",
+			Reasoning:   "Multi-line text is easiest to read in the standard banner.",
 			Alternatives: []Alternative{
 				{
 					Banner: "shadow",
-					Score: 0.6,
+					Score:  0.6,
 					Reason: "Bold, but heavy across several lines",
 				},
 				{
 					Banner: "thinkertoy",
-					Score: 0.4,
+					Score:  0.4,
 					Reason: "Thin decorative lines are hard to read across lines",
 				},
 			},
@@ -69,16 +72,16 @@ func GetRecommend(input string) (Recommendation, error) {
 	} else if specRatio >= specRatioLimit {
 		return Recommendation{
 			Recommended: "thinkertoy",
-			Reasoning: "Symbol-heavy text suits the playful, decorative style.",
+			Reasoning:   "Symbol-heavy text suits the playful, decorative style.",
 			Alternatives: []Alternative{
 				{
 					Banner: "standard",
-					Score: 0.6,
+					Score:  0.6,
 					Reason: "Clear and readable, less playful",
 				},
 				{
 					Banner: "shadow",
-					Score: 0.4,
+					Score:  0.4,
 					Reason: "Shadow makes symbols harder to tell apart",
 				},
 			},
@@ -87,16 +90,16 @@ func GetRecommend(input string) (Recommendation, error) {
 	} else if (sts.lower == 0 && sts.upper > 0) || sts.length <= shortLen {
 		return Recommendation{
 			Recommended: "shadow",
-			Reasoning: "Short or uppercase text is bold and stands out.",
+			Reasoning:   "Short or uppercase text is bold and stands out.",
 			Alternatives: []Alternative{
 				{
 					Banner: "standard",
-					Score: 0.7,
+					Score:  0.7,
 					Reason: "Good alternative, slightly less impactful",
 				},
 				{
 					Banner: "thinkertoy",
-					Score: 0.4,
+					Score:  0.4,
 					Reason: "Too decorative for short, bold text",
 				},
 			},
@@ -105,41 +108,40 @@ func GetRecommend(input string) (Recommendation, error) {
 	} else if sts.length > longLen {
 		return Recommendation{
 			Recommended: "standard",
-			Reasoning: "Longer text stays readable in the standard banner.",
+			Reasoning:   "Longer text stays readable in the standard banner.",
 			Alternatives: []Alternative{
 				{
 					Banner: "shadow",
-					Score: 0.5,
+					Score:  0.5,
 					Reason: "Too heavy for long text",
 				},
 				{
 					Banner: "thinkertoy",
-					Score: 0.4,
+					Score:  0.4,
 					Reason: "Decorative style is hard to read at length",
 				},
 			},
-		}, nil 
+		}, nil
 	}
 
 	return Recommendation{
-			Recommended: "thinkertoy",
-			Reasoning: "Playful for short mixed-case text.",
-			Alternatives: []Alternative{
-				{
-					Banner: "standard",
-					Score: 0.7,
-					Reason: "Safe and readable choice",
-				},
-				{
-					Banner: "shadow",
-					Score: 0.5,
-					Reason: "Bold, but less fitting for mixed case",
-				},
+		Recommended: "thinkertoy",
+		Reasoning:   "Playful for short mixed-case text.",
+		Alternatives: []Alternative{
+			{
+				Banner: "standard",
+				Score:  0.7,
+				Reason: "Safe and readable choice",
 			},
+			{
+				Banner: "shadow",
+				Score:  0.5,
+				Reason: "Bold, but less fitting for mixed case",
+			},
+		},
 	}, nil
-	
-}
 
+}
 
 func analyzeInput(input []rune) Stats {
 	// To convert new lines into '\n'
@@ -167,12 +169,12 @@ func analyzeInput(input []rune) Stats {
 		}
 	}
 
-	return Stats {
-		upper: upCount,
-		lower: lowCount,
-		special: specCount,
+	return Stats{
+		upper:    upCount,
+		lower:    lowCount,
+		special:  specCount,
 		newLines: newLineCount,
-		length: inputLen,
+		length:   inputLen,
 		nonSpace: nonSpaceCount,
 	}
 }
@@ -205,7 +207,6 @@ func isSpecial(ch rune) bool {
 		(ch >= '[' && ch <= '`') ||
 		(ch >= '{' && ch <= '~')
 }
-
 
 // Function: to convert '\n' to new line
 func convertLineBreaks(input string) string {

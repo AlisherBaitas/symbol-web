@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"symbol-web/internal/ai"
+	"symbol-web/internal/ascii"
 )
 
 // [Suggestions] HTTP-обработчик подсказок: POST /api/suggest (маршрут в cmd/server/main.go).
@@ -22,6 +23,8 @@ func HandleSuggestion(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	// [Fix] "\r\n" от клиентов API считаем обычным переносом, как в генераторе.
+	text = ascii.NormalizeLineBreaks(text)
 	// [Suggestions] GetSuggestions не проверяет максимальную длину, поэтому проверяем здесь.
 	// Тот же лимит, что и у формы: дальше 1000 символов генератор текст не примет.
 	if len(text) > maxTextBytes {
@@ -60,30 +63,24 @@ func HandleSuggestion(w http.ResponseWriter, r *http.Request) {
 // HandleBannerRec возвращает рекомендацию по локальным Go-правилам без вызова LLM.
 func HandleBannerRec(w http.ResponseWriter, r *http.Request) {
 
-	// Value from FORM
-	inputWord := r.FormValue("inputWord")
-
-	// Recomendation result
-	res, errRec := ai.GetRecommend(inputWord)
-
-	if errRec != nil  {
-        http.Error(w, errRec.Error(), http.StatusBadRequest) // 400
-        return
-	}
-
-	// Return the JSON encoding 
-	jsonRes, err := json.Marshal(res)
-
-	if err != nil {
-		http.Error(w, "Failed to encode to JSON", http.StatusInternalServerError) // 500
+	// [Fix] По ТЗ запрос — JSON {"text": "..."}. Раньше читалось поле формы inputWord,
+	// и запрос из ТЗ {"text":"WELCOME"} получал 400 "Text is empty".
+	text, ok := readTextRequest(w, r)
+	if !ok {
 		return
 	}
 
-	// To tell that response contains JSON data
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK) // 200
-	// To send JSON result
-	w.Write(jsonRes)
+	// Recomendation result
+	res, errRec := ai.GetRecommend(text)
+
+	if errRec != nil {
+		// [Fix] Ошибка в JSON, как у остальных AI-эндпоинтов (раньше был простой текст).
+		writeVariationError(w, http.StatusBadRequest, errRec.Error()) // 400
+		return
+	}
+
+	// [Fix] Общая функция кодирования: при ошибке маршалинга вернёт 500 в JSON.
+	writeVariationJSON(w, http.StatusOK, res) // 200
 }
 
 // HandleVariation принимает JSON с текстом и возвращает проверенные творческие варианты.
@@ -197,23 +194,23 @@ func writeVariationJSON(w http.ResponseWriter, status int, payload any) {
 }
 
 func validateArtText(input string) (bool, string) {
-    if strings.TrimSpace(input) == "" {
-        return false, "Text is empty"
-    }
+	if strings.TrimSpace(input) == "" {
+		return false, "Text is empty"
+	}
 
-    if utf8.RuneCountInString(input) > 1000 {
-        return false, "Text is too long (max 1000 characters)"
-    }
+	if utf8.RuneCountInString(input) > 1000 {
+		return false, "Text is too long (max 1000 characters)"
+	}
 
-    for _, r := range input {
-        if r == '\n' {
-            continue
-        }
+	for _, r := range input {
+		if r == '\n' {
+			continue
+		}
 
-        if r < ' ' || r > '~' {
-            return false, "Invalid character"
-        }
-    }
+		if r < ' ' || r > '~' {
+			return false, "Invalid character"
+		}
+	}
 
-    return true, ""
+	return true, ""
 }
